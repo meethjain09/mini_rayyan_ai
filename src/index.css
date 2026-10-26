@@ -1,0 +1,478 @@
+@import "tailwindcss";
+
+@property --border-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@layer base {
+  :root {
+    --font-display: 'Syne', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  /* ------------------------------------------------------------------------ */
+  /* THEME 1: BIOLUMINESCENT SAGE (DEFAULT) - Deep Botanical & Mint          */
+  /* ------------------------------------------------------------------------ */
+  :root, [data-theme="emerald-sage"] {
+    --bg-canvas: #05120d;
+    --bg-canvas-end: #091c14;
+    --text-primary: #ecfdf5;
+    --text-secondary: #a7f3d0;
+    --text-muted: #6ee7b7;
+    --text-dim: #047857;
+
+    --glass-base-bg: rgba(6, 24, 17, 0.55);
+    --glass-card-bg: rgba(7, 28, 20, 0.65);
+    --glass-card-hover: rgba(10, 38, 27, 0.78);
+    --glass-elevated-bg: rgba(6, 26, 18, 0.88);
+    --glass-input-bg: rgba(3, 16, 11, 0.65);
+
+    --border-subtle: rgba(52, 211, 153, 0.14);
+    --border-card: rgba(52, 211, 153, 0.2);
+    --border-elevated: rgba(52, 211, 153, 0.3);
+
+    --accent-primary: #10b981;
+    --accent-secondary: #a3e635;
+    --accent-gradient: linear-gradient(135deg, #10b981 0%, #34d399 50%, #a3e635 100%);
+    --accent-text: #022c22;
+    --accent-glow: rgba(16, 185, 129, 0.25);
+
+    --border-conic: conic-gradient(
+      from var(--border-angle),
+      #34d399 0%,
+      #a3e635 25%,
+      #2dd4bf 50%,
+      #10b981 75%,
+      #34d399 100%
+    );
+
+    --pico-p-bg: rgba(16, 185, 129, 0.15);
+    --pico-p-border: rgba(16, 185, 129, 0.35);
+    --pico-p-text: #6ee7b7;
+
+    --pico-i-bg: rgba(163, 230, 53, 0.15);
+    --pico-i-border: rgba(163, 230, 53, 0.35);
+    --pico-i-text: #bef264;
+
+    --pico-c-bg: rgba(251, 191, 36, 0.15);
+    --pico-c-border: rgba(251, 191, 36, 0.35);
+    --pico-c-text: #fde68a;
+
+    --pico-o-bg: rgba(45, 212, 191, 0.15);
+    --pico-o-border: rgba(45, 212, 191, 0.35);
+    --pico-o-text: #5eead4;
+
+    --orb-1: rgba(16, 185, 129, 0.15);
+    --orb-2: rgba(163, 230, 53, 0.1);
+    --orb-3: rgba(45, 212, 191, 0.12);
+  }
+
+  /* ------------------------------------------------------------------------ */
+  /* THEME 2: TITANIUM FROST (LIGHT) - Architectural Silver & Klein Cobalt   */
+  /* ------------------------------------------------------------------------ */
+  [data-theme="titanium-frost"] {
+    --bg-canvas: #f1f5f9;
+    --bg-canvas-end: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    --text-dim: #94a3b8;
+
+    --glass-base-bg: rgba(255, 255, 255, 0.7);
+    --glass-card-bg: rgba(255, 255, 255, 0.8);
+    --glass-card-hover: rgba(255, 255, 255, 0.95);
+    --glass-elevated-bg: rgba(255, 255, 255, 0.95);
+    --glass-input-bg: rgba(241, 245, 249, 0.85);
+
+    --border-subtle: rgba(15, 23, 42, 0.08);
+    --border-card: rgba(15, 23, 42, 0.12);
+    --border-elevated: rgba(15, 23, 42, 0.2);
+
+    --accent-primary: #2563eb;
+    --accent-secondary: #f97316;
+    --accent-gradient: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%);
+    --accent-text: #ffffff;
+    --accent-glow: rgba(37, 99, 235, 0.2);
+
+    --border-conic: conic-gradient(
+      from var(--border-angle),
+      #2563eb 0%,
+      #38bdf8 25%,
+      #6366f1 50%,
+      #f97316 75%,
+      #2563eb 100%
+    );
+
+    --pico-p-bg: rgba(37, 99, 235, 0.08);
+    --pico-p-border: rgba(37, 99, 235, 0.25);
+    --pico-p-text: #1d4ed8;
+
+    --pico-i-bg: rgba(13, 148, 136, 0.08);
+    --pico-i-border: rgba(13, 148, 136, 0.25);
+    --pico-i-text: #0f766e;
+
+    --pico-c-bg: rgba(234, 88, 12, 0.08);
+    --pico-c-border: rgba(234, 88, 12, 0.25);
+    --pico-c-text: #c2410c;
+
+    --pico-o-bg: rgba(124, 58, 237, 0.08);
+    --pico-o-border: rgba(124, 58, 237, 0.25);
+    --pico-o-text: #6d28d9;
+
+    --orb-1: rgba(37, 99, 235, 0.12);
+    --orb-2: rgba(249, 115, 22, 0.08);
+    --orb-3: rgba(56, 189, 248, 0.1);
+  }
+
+  /* ------------------------------------------------------------------------ */
+  /* THEME 3: CYBER VIOLET - Royal Amethyst & Neon Coral                     */
+  /* ------------------------------------------------------------------------ */
+  [data-theme="cyber-violet"] {
+    --bg-canvas: #0e0617;
+    --bg-canvas-end: #180b26;
+    --text-primary: #fdf4ff;
+    --text-secondary: #f0abfc;
+    --text-muted: #d8b4fe;
+    --text-dim: #7e22ce;
+
+    --glass-base-bg: rgba(24, 11, 40, 0.55);
+    --glass-card-bg: rgba(28, 13, 48, 0.65);
+    --glass-card-hover: rgba(38, 18, 64, 0.8);
+    --glass-elevated-bg: rgba(26, 12, 44, 0.9);
+    --glass-input-bg: rgba(17, 7, 30, 0.7);
+
+    --border-subtle: rgba(244, 63, 94, 0.14);
+    --border-card: rgba(244, 63, 94, 0.2);
+    --border-elevated: rgba(244, 63, 94, 0.3);
+
+    --accent-primary: #f43f5e;
+    --accent-secondary: #c084fc;
+    --accent-gradient: linear-gradient(135deg, #f43f5e 0%, #ec4899 50%, #c084fc 100%);
+    --accent-text: #ffffff;
+    --accent-glow: rgba(244, 63, 94, 0.3);
+
+    --border-conic: conic-gradient(
+      from var(--border-angle),
+      #f43f5e 0%,
+      #c084fc 25%,
+      #ec4899 50%,
+      #fb7185 75%,
+      #f43f5e 100%
+    );
+
+    --pico-p-bg: rgba(192, 132, 252, 0.15);
+    --pico-p-border: rgba(192, 132, 252, 0.35);
+    --pico-p-text: #e9d5ff;
+
+    --pico-i-bg: rgba(244, 63, 94, 0.15);
+    --pico-i-border: rgba(244, 63, 94, 0.35);
+    --pico-i-text: #fecdd3;
+
+    --pico-c-bg: rgba(251, 146, 60, 0.15);
+    --pico-c-border: rgba(251, 146, 60, 0.35);
+    --pico-c-text: #fed7aa;
+
+    --pico-o-bg: rgba(236, 72, 153, 0.15);
+    --pico-o-border: rgba(236, 72, 153, 0.35);
+    --pico-o-text: #fbcfe8;
+
+    --orb-1: rgba(244, 63, 94, 0.14);
+    --orb-2: rgba(192, 132, 252, 0.14);
+    --orb-3: rgba(236, 72, 153, 0.12);
+  }
+
+  /* ------------------------------------------------------------------------ */
+  /* THEME 4: AMBER NOIR - Smoked Bronze & Radiant Gold                      */
+  /* ------------------------------------------------------------------------ */
+  [data-theme="amber-noir"] {
+    --bg-canvas: #120b06;
+    --bg-canvas-end: #1e130a;
+    --text-primary: #fffbeb;
+    --text-secondary: #fde68a;
+    --text-muted: #fcd34d;
+    --text-dim: #b45309;
+
+    --glass-base-bg: rgba(30, 18, 10, 0.55);
+    --glass-card-bg: rgba(36, 21, 12, 0.65);
+    --glass-card-hover: rgba(48, 29, 16, 0.8);
+    --glass-elevated-bg: rgba(34, 20, 11, 0.9);
+    --glass-input-bg: rgba(20, 11, 6, 0.7);
+
+    --border-subtle: rgba(245, 158, 11, 0.14);
+    --border-card: rgba(245, 158, 11, 0.2);
+    --border-elevated: rgba(245, 158, 11, 0.3);
+
+    --accent-primary: #f59e0b;
+    --accent-secondary: #ea580c;
+    --accent-gradient: linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #f97316 100%);
+    --accent-text: #291500;
+    --accent-glow: rgba(245, 158, 11, 0.28);
+
+    --border-conic: conic-gradient(
+      from var(--border-angle),
+      #fbbf24 0%,
+      #f97316 25%,
+      #ef4444 50%,
+      #eab308 75%,
+      #fbbf24 100%
+    );
+
+    --pico-p-bg: rgba(251, 191, 36, 0.15);
+    --pico-p-border: rgba(251, 191, 36, 0.35);
+    --pico-p-text: #fef08a;
+
+    --pico-i-bg: rgba(249, 115, 22, 0.15);
+    --pico-i-border: rgba(249, 115, 22, 0.35);
+    --pico-i-text: #ffedd5;
+
+    --pico-c-bg: rgba(234, 179, 8, 0.15);
+    --pico-c-border: rgba(234, 179, 8, 0.35);
+    --pico-c-text: #fef9c3;
+
+    --pico-o-bg: rgba(239, 68, 68, 0.15);
+    --pico-o-border: rgba(239, 68, 68, 0.35);
+    --pico-o-text: #fee2e2;
+
+    --orb-1: rgba(245, 158, 11, 0.15);
+    --orb-2: rgba(234, 88, 12, 0.12);
+    --orb-3: rgba(251, 191, 36, 0.1);
+  }
+
+  body {
+    font-family: var(--font-body);
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    overflow-x: hidden;
+    transition: background-color 0.45s cubic-bezier(0.16, 1, 0.3, 1), color 0.35s ease;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+  }
+
+  code, pre, .font-mono {
+    font-family: var(--font-mono);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* FLUID RESPONSIVE TYPOGRAPHY SCALE VIA CLAMP()                             */
+/* -------------------------------------------------------------------------- */
+
+.text-fluid-hero {
+  font-size: clamp(1.85rem, 3.5vw + 0.8rem, 3.5rem);
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+}
+
+.text-fluid-h1 {
+  font-size: clamp(1.5rem, 2.5vw + 0.6rem, 2.5rem);
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+}
+
+.text-fluid-h2 {
+  font-size: clamp(1.2rem, 1.8vw + 0.4rem, 1.75rem);
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+.text-fluid-h3 {
+  font-size: clamp(1.05rem, 1.2vw + 0.3rem, 1.35rem);
+  line-height: 1.35;
+}
+
+.text-fluid-body {
+  font-size: clamp(0.85rem, 0.3vw + 0.75rem, 0.975rem);
+  line-height: 1.6;
+}
+
+.text-fluid-sm {
+  font-size: clamp(0.75rem, 0.2vw + 0.7rem, 0.85rem);
+  line-height: 1.5;
+}
+
+.text-fluid-mono {
+  font-size: clamp(0.68rem, 0.18vw + 0.64rem, 0.78rem);
+  line-height: 1.45;
+}
+
+/* -------------------------------------------------------------------------- */
+/* THEME FADE-IN & TRANSITION ANIMATION                                      */
+/* -------------------------------------------------------------------------- */
+
+.theme-fade-transition {
+  animation: themeFadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes themeFadeIn {
+  0% {
+    opacity: 0.85;
+    filter: blur(1.5px);
+    transform: scale(0.998);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: scale(1);
+  }
+}
+
+/* Smooth transition for theme colors */
+.theme-glass-base,
+.theme-glass-card,
+.theme-glass-elevated,
+.theme-glass-input,
+.theme-animated-card {
+  transition: background-color 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Custom aesthetic scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-canvas);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent-primary);
+  opacity: 0.3;
+  border-radius: 9999px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* DYNAMIC FROSTED GLASS CLASSES DRIVEN BY THEME VARIABLES                   */
+/* -------------------------------------------------------------------------- */
+
+.theme-glass-base {
+  background: var(--glass-base-bg);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.theme-glass-card {
+  background: var(--glass-card-bg);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border: 1px solid var(--border-card);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.theme-glass-card:hover {
+  background: var(--glass-card-hover);
+  border-color: var(--border-elevated);
+  box-shadow: 0 20px 40px -15px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.theme-glass-elevated {
+  background: var(--glass-elevated-bg);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid var(--border-elevated);
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.theme-glass-input {
+  background: var(--glass-input-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+/* -------------------------------------------------------------------------- */
+/* DYNAMIC CSS MASKING ANIMATED GRADIENT BORDER                              */
+/* -------------------------------------------------------------------------- */
+
+@keyframes borderRotate {
+  0% {
+    --border-angle: 0deg;
+  }
+  100% {
+    --border-angle: 360deg;
+  }
+}
+
+.theme-animated-card {
+  position: relative;
+  border-radius: 1.5rem;
+  background: var(--glass-card-bg);
+  backdrop-filter: blur(26px);
+  -webkit-backdrop-filter: blur(26px);
+  box-shadow: 0 20px 50px -10px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.theme-animated-card::before {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: var(--border-conic);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: borderRotate 6s linear infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.theme-animated-card::after {
+  content: "";
+  position: absolute;
+  inset: 0px;
+  border-radius: inherit;
+  background: radial-gradient(circle at 50% 0%, var(--accent-glow), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Primary Button with Theme Gradient & Animated Border */
+.theme-primary-btn {
+  position: relative;
+  border-radius: 0.875rem;
+  background: var(--accent-gradient);
+  color: var(--accent-text);
+  font-weight: 700;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 25px -5px var(--accent-glow);
+  overflow: hidden;
+}
+
+.theme-primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 15px 35px -5px var(--accent-glow);
+  filter: brightness(1.08);
+}
+
+.theme-primary-btn::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--border-angle),
+    rgba(255, 255, 255, 0.8) 0%,
+    var(--accent-primary) 50%,
+    rgba(255, 255, 255, 0.8) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: borderRotate 4s linear infinite;
+  pointer-events: none;
+  z-index: 3;
+}
