@@ -411,24 +411,51 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
           </button>
         </div>
 
-        {activeTab === 'query' ? (
+        {!activeBook && activeTab !== 'books' ? (
+          <div className="mt-8 text-center py-16 px-4 border border-dashed rounded-3xl theme-glass-base" style={{ borderColor: 'var(--border-subtle)' }}>
+            <Compass className="w-12 h-12 mx-auto mb-3 opacity-40" />
+            <h3 className="text-base font-semibold font-display" style={{ color: 'var(--text-primary)' }}>No Research Protocol Created Yet</h3>
+            <p className="text-xs max-w-sm mx-auto mt-1 font-sans" style={{ color: 'var(--text-muted)' }}>
+              Please create a research book protocol first to formulate PICO queries, fetch literature, and screen studies.
+            </p>
+            <div className="mt-6 flex items-center justify-center gap-3">
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="theme-primary-btn px-4 py-2 text-xs flex items-center gap-2 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Protocol</span>
+              </button>
+              {onSwitchToSimpleMode && (
+                <button
+                  onClick={onSwitchToSimpleMode}
+                  className="theme-glass-input px-4 py-2 text-xs flex items-center gap-2 cursor-pointer rounded-xl hover:brightness-110"
+                  style={{ color: 'var(--accent-primary)' }}
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Simple PICO Mode</span>
+                </button>
+              )}
+            </div>
+          </div>
+        ) : activeTab === 'query' && activeBook ? (
           <ClinicalQueryInterface
             activeBook={activeBook}
             onQueryVersionSaved={() => setActiveTab('fetch')}
           />
-        ) : activeTab === 'fetch' ? (
+        ) : activeTab === 'fetch' && activeBook ? (
           <FetchAndDeduplicateView
             activeBook={activeBook}
             onProceedToScreening={() => {
               setActiveTab('screening');
             }}
           />
-        ) : activeTab === 'screening' ? (
+        ) : activeTab === 'screening' && activeBook ? (
           <ScreeningDashboard
             book={activeBook}
             onBackToFetch={() => setActiveTab('fetch')}
           />
-        ) : activeTab === 'loop' ? (
+        ) : activeTab === 'loop' && activeBook ? (
           <Level2LoopDiffView
             book={activeBook}
             onSelectQueryVersionForFetch={() => setActiveTab('fetch')}
@@ -674,10 +701,37 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
         {filteredBooks.length === 0 && (
           <div className="mt-12 text-center py-16 px-4 border border-dashed rounded-3xl theme-glass-base" style={{ borderColor: 'var(--border-subtle)' }}>
             <Compass className="w-12 h-12 mx-auto mb-3 opacity-40" />
-            <h3 className="text-base font-semibold font-display" style={{ color: 'var(--text-primary)' }}>No Research Books found</h3>
+            <h3 className="text-base font-semibold font-display" style={{ color: 'var(--text-primary)' }}>
+              {books.length === 0 ? 'No Research Books Yet' : 'No matching Research Books found'}
+            </h3>
             <p className="text-xs max-w-sm mx-auto mt-1 font-sans" style={{ color: 'var(--text-muted)' }}>
-              No review projects matched your search query. Clear search or create a new book.
+              {books.length === 0
+                ? 'Your systematic review workspace is clean and ready. Create your first research protocol to begin screening literature.'
+                : 'No review projects matched your search query. Clear search or create a new book.'}
             </p>
+            {books.length === 0 && (
+              <div className="mt-6 flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="theme-primary-btn px-4 py-2 text-xs flex items-center gap-2 cursor-pointer shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Create First Protocol</span>
+                </button>
+                {onSwitchToSimpleMode && (
+                  <button
+                    type="button"
+                    onClick={onSwitchToSimpleMode}
+                    className="theme-glass-input px-4 py-2 text-xs flex items-center gap-2 cursor-pointer rounded-xl hover:brightness-110"
+                    style={{ color: 'var(--accent-primary)' }}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>Try Simple PICO Mode</span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </>

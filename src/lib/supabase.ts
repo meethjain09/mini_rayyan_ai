@@ -1,77 +1,21 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Database, ResearchBook, Profile, QueryVersion, CanonicalRecord, ScreeningDecision, AuditLog, RunLogEntry, QueryRecordLink } from '../types/database';
 
-// Default mock user for testing without remote database
-const DEMO_USER: Profile = {
-  id: '00000000-0000-0000-0000-000000000001',
-  email: 'researcher@rayyan-screening.org',
-  created_at: new Date().toISOString(),
+// Persistent storage keys
+export const STORAGE_KEYS = {
+  USER: 'mini_rayyan_current_user',
+  REMEMBERED_EMAIL: 'mini_rayyan_remembered_email',
+  REMEMBER_ME: 'mini_rayyan_remember_me',
+  BOOKS: 'mini_rayyan_books',
+  ACTIVE_BOOK: 'mini_rayyan_active_book_id',
+  QUERY_VERSIONS: 'mini_rayyan_query_versions',
+  ACCOUNTS: 'mini_rayyan_accounts',
+  RECORDS: 'mini_rayyan_records',
+  LINKS: 'mini_rayyan_query_links',
+  DECISIONS: 'mini_rayyan_screening_decisions',
+  AUDIT_LOGS: 'mini_rayyan_audit_logs',
+  RUN_LOGS: 'mini_rayyan_run_logs',
 };
-
-// Seed sample systematic review project if none exists in local demo state
-const INITIAL_DEMO_BOOKS: ResearchBook[] = [
-  {
-    id: 'b1-demo-t2d-metformin',
-    user_id: DEMO_USER.id,
-    title: 'Metformin vs Placebo in Adults with Type 2 Diabetes',
-    description: 'Systematic review evaluating the efficacy and safety of Metformin monotherapy in lowering HbA1c levels compared to placebo or standard care in adult populations.',
-    pico_config: {
-      p: 'Adults with type 2 diabetes mellitus (age >= 18)',
-      i: 'Metformin (immediate or extended release)',
-      c: 'Placebo or lifestyle modification alone',
-      o: 'HbA1c reduction (%), fasting plasma glucose, adverse events',
-      inclusionCriteria: [
-        'Human randomized controlled trials (RCTs)',
-        'Adult participants (≥18 years) with confirmed T2DM',
-        'Intervention duration ≥12 weeks',
-      ],
-      exclusionCriteria: [
-        'Animal or in vitro models',
-        'Type 1 diabetes or gestational diabetes',
-        'Review articles, conference abstracts, or editorials',
-        'Non-English publications',
-      ],
-    },
-    created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
-    updated_at: new Date(Date.now() - 86400000 * 1).toISOString(),
-  },
-  {
-    id: 'b2-demo-sglt2-hf',
-    user_id: DEMO_USER.id,
-    title: 'SGLT2 Inhibitors in Heart Failure with Preserved Ejection Fraction',
-    description: 'Investigating cardiovascular mortality and heart failure hospitalization outcomes with Empagliflozin/Dapagliflozin in HFpEF patients.',
-    pico_config: {
-      p: 'Adult patients with HFpEF (LVEF > 40-50%)',
-      i: 'SGLT2 inhibitors (Empagliflozin, Dapagliflozin)',
-      c: 'Placebo or standard background HF therapy',
-      o: 'Composite CV death and HF hospitalizations',
-      inclusionCriteria: [
-        'Phase III Double-blind RCTs',
-        'Baseline LVEF > 40%',
-      ],
-      exclusionCriteria: [
-        'End-stage kidney disease (eGFR < 20)',
-        'Post-hoc observational subgroup analyses',
-      ],
-    },
-    created_at: new Date(Date.now() - 86400000 * 7).toISOString(),
-    updated_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-  },
-];
-
-const INITIAL_DEMO_QUERY_VERSIONS: QueryVersion[] = [
-  {
-    id: 'qv-demo-01',
-    book_id: 'b1-demo-t2d-metformin',
-    version_number: 1,
-    raw_user_query: 'In adults with type 2 diabetes, does metformin compared to placebo reduce HbA1c?',
-    boolean_query: '("Adults with type 2 diabetes mellitus"[Title/Abstract]) AND ("Metformin"[Title/Abstract]) AND ("Placebo"[Title/Abstract] OR "control"[Title/Abstract]) AND ("humans"[MeSH Terms]) AND (2015[Date - Publication] : 2026[Date - Publication])',
-    date_start: '2015',
-    date_end: '2026',
-    total_hits: 142,
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-  },
-];
 
 // Environment configuration
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
@@ -90,24 +34,53 @@ export const supabase: SupabaseClient<Database> | null = isSupabaseConfigured
 
 // Local persistent mock store for instant testing & offline readiness
 class LocalStorageStore {
-  private userKey = 'mini_rayyan_current_user';
-  private booksKey = 'mini_rayyan_books';
-  private activeBookKey = 'mini_rayyan_active_book_id';
-  private queryVersionsKey = 'mini_rayyan_query_versions';
+  private userKey = STORAGE_KEYS.USER;
+  private booksKey = STORAGE_KEYS.BOOKS;
+  private activeBookKey = STORAGE_KEYS.ACTIVE_BOOK;
+  private queryVersionsKey = STORAGE_KEYS.QUERY_VERSIONS;
 
   constructor() {
     if (typeof window !== 'undefined') {
-      if (!localStorage.getItem(this.booksKey)) {
-        localStorage.setItem(this.booksKey, JSON.stringify(INITIAL_DEMO_BOOKS));
-      }
-      if (!localStorage.getItem(this.activeBookKey)) {
-        localStorage.setItem(this.activeBookKey, INITIAL_DEMO_BOOKS[0].id);
-      }
-      if (!localStorage.getItem(this.userKey)) {
-        localStorage.setItem(this.userKey, JSON.stringify(DEMO_USER));
-      }
-      if (!localStorage.getItem(this.queryVersionsKey)) {
-        localStorage.setItem(this.queryVersionsKey, JSON.stringify(INITIAL_DEMO_QUERY_VERSIONS));
+      // Clean up legacy hardcoded demo books / demo user if found from previous sessions
+      try {
+        const storedUser = localStorage.getItem(this.userKey);
+        if (storedUser) {
+          const parsed = JSON.parse(storedUser);
+          if (
+            parsed.id === '00000000-0000-0000-0000-000000000001' ||
+            parsed.email === 'researcher@rayyan-screening.org' ||
+            parsed.email === 'lead.investigator@rayyan-screening.org'
+          ) {
+            localStorage.removeItem(this.userKey);
+          }
+        }
+
+        const storedBooks = localStorage.getItem(this.booksKey);
+        if (storedBooks) {
+          const parsedBooks: ResearchBook[] = JSON.parse(storedBooks);
+          // Remove default sample books (Metformin / SGLT2)
+          const cleanedBooks = parsedBooks.filter(
+            (b) => b.id !== 'b1-demo-t2d-metformin' && b.id !== 'b2-demo-sglt2-hf'
+          );
+          if (cleanedBooks.length !== parsedBooks.length) {
+            localStorage.setItem(this.booksKey, JSON.stringify(cleanedBooks));
+            const activeId = localStorage.getItem(this.activeBookKey);
+            if (activeId === 'b1-demo-t2d-metformin' || activeId === 'b2-demo-sglt2-hf') {
+              localStorage.setItem(this.activeBookKey, cleanedBooks[0]?.id || '');
+            }
+          }
+        }
+
+        const storedQVs = localStorage.getItem(this.queryVersionsKey);
+        if (storedQVs) {
+          const parsedQVs: QueryVersion[] = JSON.parse(storedQVs);
+          const cleanedQVs = parsedQVs.filter((qv) => qv.id !== 'qv-demo-01');
+          if (cleanedQVs.length !== parsedQVs.length) {
+            localStorage.setItem(this.queryVersionsKey, JSON.stringify(cleanedQVs));
+          }
+        }
+      } catch (err) {
+        console.warn('LocalStorage cleanup warning:', err);
       }
     }
   }
@@ -118,22 +91,37 @@ class LocalStorageStore {
     return raw ? JSON.parse(raw) : null;
   }
 
-  setCurrentUser(user: Profile | null): void {
+  setCurrentUser(user: Profile | null, remember: boolean = true): void {
     if (typeof window === 'undefined') return;
     if (user) {
       localStorage.setItem(this.userKey, JSON.stringify(user));
+      if (remember && user.email) {
+        localStorage.setItem(STORAGE_KEYS.REMEMBERED_EMAIL, user.email);
+        localStorage.setItem(STORAGE_KEYS.REMEMBER_ME, 'true');
+      }
     } else {
       localStorage.removeItem(this.userKey);
     }
   }
 
+  getRememberedEmail(): string {
+    if (typeof window === 'undefined') return '';
+    return localStorage.getItem(STORAGE_KEYS.REMEMBERED_EMAIL) || '';
+  }
+
+  isRememberMeEnabled(): boolean {
+    if (typeof window === 'undefined') return true;
+    const val = localStorage.getItem(STORAGE_KEYS.REMEMBER_ME);
+    return val === null ? true : val === 'true';
+  }
+
   getBooks(userId?: string): ResearchBook[] {
-    if (typeof window === 'undefined') return INITIAL_DEMO_BOOKS;
+    if (typeof window === 'undefined') return [];
     const raw = localStorage.getItem(this.booksKey);
-    const allBooks: ResearchBook[] = raw ? JSON.parse(raw) : INITIAL_DEMO_BOOKS;
+    const allBooks: ResearchBook[] = raw ? JSON.parse(raw) : [];
     if (!userId) return allBooks;
     const userBooks = allBooks.filter((b) => b.user_id === userId);
-    return userBooks.length > 0 ? userBooks : allBooks;
+    return userBooks;
   }
 
   saveBooks(books: ResearchBook[]): void {
@@ -142,7 +130,7 @@ class LocalStorageStore {
   }
 
   getActiveBookId(): string | null {
-    if (typeof window === 'undefined') return INITIAL_DEMO_BOOKS[0].id;
+    if (typeof window === 'undefined') return null;
     return localStorage.getItem(this.activeBookKey);
   }
 
@@ -152,8 +140,8 @@ class LocalStorageStore {
   }
 
   createBook(title: string, description: string, pico: ResearchBook['pico_config'], userId?: string): ResearchBook {
-    const user = this.getCurrentUser() || DEMO_USER;
-    const effectiveUserId = userId || user.id;
+    const user = this.getCurrentUser();
+    const effectiveUserId = userId || user?.id || 'guest-' + Date.now().toString(36);
     const newBook: ResearchBook = {
       id: 'book-' + Math.random().toString(36).substring(2, 9) + '-' + Date.now().toString(36),
       user_id: effectiveUserId,
@@ -179,15 +167,15 @@ class LocalStorageStore {
   }
 
   getQueryVersions(bookId: string): QueryVersion[] {
-    if (typeof window === 'undefined') return INITIAL_DEMO_QUERY_VERSIONS.filter(q => q.book_id === bookId);
+    if (typeof window === 'undefined') return [];
     const raw = localStorage.getItem(this.queryVersionsKey);
-    const list: QueryVersion[] = raw ? JSON.parse(raw) : INITIAL_DEMO_QUERY_VERSIONS;
+    const list: QueryVersion[] = raw ? JSON.parse(raw) : [];
     return list.filter(q => q.book_id === bookId).sort((a, b) => b.version_number - a.version_number);
   }
 
   saveQueryVersion(queryData: Omit<QueryVersion, 'id' | 'created_at'>): QueryVersion {
     const raw = localStorage.getItem(this.queryVersionsKey);
-    const list: QueryVersion[] = raw ? JSON.parse(raw) : INITIAL_DEMO_QUERY_VERSIONS;
+    const list: QueryVersion[] = raw ? JSON.parse(raw) : [];
     
     // Auto-calculate next incremental version number
     const existingVersions = list.filter(q => q.book_id === queryData.book_id);

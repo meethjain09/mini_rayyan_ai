@@ -4,10 +4,10 @@
  * 
  * USER AUTHENTICATION MODAL
  * Provides Email & Password Sign In, Sign Up, and Account Management.
- * Works seamlessly with Supabase Auth or local persistent account store.
+ * Implements persistent "Remember Me" session tracking across browser visits.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Mail,
@@ -16,11 +16,13 @@ import {
   ShieldCheck,
   CheckCircle2,
   AlertCircle,
-  User,
+  Eye,
+  EyeOff,
   Sparkles,
   Loader2,
+  UserCheck,
 } from 'lucide-react';
-import { supabase, isSupabaseConfigured, localStore } from '../../lib/supabase';
+import { supabase, isSupabaseConfigured, localStore, STORAGE_KEYS } from '../../lib/supabase';
 import { Profile } from '../../types/database';
 
 interface AuthModalProps {
@@ -42,9 +44,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Load remembered email and preferences on open
+  useEffect(() => {
+    if (isOpen && !currentUser) {
+      const remembered = localStore.getRememberedEmail();
+      if (remembered) {
+        setEmail(remembered);
+      }
+      setRememberMe(localStore.isRememberMeEnabled());
+      setErrorMessage(null);
+      setSuccessMessage(null);
+    }
+  }, [isOpen, currentUser]);
 
   if (!isOpen) return null;
 
@@ -56,12 +73,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     const cleanEmail = email.trim().toLowerCase();
 
     if (!cleanEmail || !password) {
-      setErrorMessage('Please provide both email address and password.');
+      setErrorMessage('Please provide both your email address and password.');
       return;
     }
 
     if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
-      setErrorMessage('Please enter a valid email address.');
+      setErrorMessage('Please enter a valid email address (e.g. researcher@hospital.org).');
       return;
     }
 
@@ -71,7 +88,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
 
     if (isSignUp && password !== confirmPassword) {
-      setErrorMessage('Passwords do not match.');
+      setErrorMessage('Passwords do not match. Please re-enter.');
       return;
     }
 
@@ -91,11 +108,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               email: data.user.email || cleanEmail,
               created_at: new Date().toISOString(),
             };
+            localStore.setCurrentUser(profile, rememberMe);
             setSuccessMessage('Account created successfully! Welcome to Mini-Rayyan.');
             setTimeout(() => {
               onAuthSuccess(profile);
               onClose();
-            }, 800);
+            }, 600);
           }
         } else {
           const { data, error } = await supabase.auth.signInWithPassword({
@@ -109,7 +127,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               email: data.user.email || cleanEmail,
               created_at: new Date().toISOString(),
             };
-            setSuccessMessage('Signed in successfully!');
+            localStore.setCurrentUser(profile, rememberMe);
+            setSuccessMessage('Signed in successfully! Loading your systematic reviews...');
             setTimeout(() => {
               onAuthSuccess(profile);
               onClose();
@@ -117,44 +136,43 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           }
         }
       } else {
-        // Local persistent account handling
-        // Generate or retrieve deterministic user id based on email
-        let storedAccountsRaw = localStorage.getItem('mini_rayyan_accounts');
+        // Local persistent account store
+        let storedAccountsRaw = localStorage.getItem(STORAGE_KEYS.ACCOUNTS);
         let accounts: { [email: string]: { id: string; passwordHash: string; created_at: string } } = storedAccountsRaw
           ? JSON.parse(storedAccountsRaw)
           : {};
 
         if (isSignUp) {
           if (accounts[cleanEmail]) {
-            setErrorMessage('An account with this email already exists. Please Sign In instead.');
+            setErrorMessage('An account with this email already exists. Switch to Sign In to access your workspace.');
             setLoading(false);
             return;
           }
           const newUserId = 'user-' + Math.random().toString(36).substring(2, 10);
           accounts[cleanEmail] = {
             id: newUserId,
-            passwordHash: btoa(password), // simple local encoding
+            passwordHash: btoa(password),
             created_at: new Date().toISOString(),
           };
-          localStorage.setItem('mini_rayyan_accounts', JSON.stringify(accounts));
+          localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts));
 
           const profile: Profile = {
             id: newUserId,
             email: cleanEmail,
             created_at: accounts[cleanEmail].created_at,
           };
-          localStore.setCurrentUser(profile);
-          setSuccessMessage('Account created! Your systematic review workspace is ready.');
+          localStore.setCurrentUser(profile, rememberMe);
+          setSuccessMessage('Account created! Your personal systematic review workspace is ready.');
           setTimeout(() => {
             onAuthSuccess(profile);
             onClose();
-          }, 800);
+          }, 600);
         } else {
           // Sign In
           const existing = accounts[cleanEmail];
           if (existing) {
             if (existing.passwordHash !== btoa(password)) {
-              setErrorMessage('Incorrect password for this email address.');
+              setErrorMessage('Incorrect password for this email address. Please try again.');
               setLoading(false);
               return;
             }
@@ -163,33 +181,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               email: cleanEmail,
               created_at: existing.created_at,
             };
-            localStore.setCurrentUser(profile);
-            setSuccessMessage('Signed in! Loading your research books and queries...');
+            localStore.setCurrentUser(profile, rememberMe);
+            setSuccessMessage('Welcome back! Loading your reviews...');
             setTimeout(() => {
               onAuthSuccess(profile);
               onClose();
-            }, 600);
+            }, 500);
           } else {
-            // First time sign-in: auto create and welcome
-            const newUserId = 'user-' + Math.random().toString(36).substring(2, 10);
-            accounts[cleanEmail] = {
-              id: newUserId,
-              passwordHash: btoa(password),
-              created_at: new Date().toISOString(),
-            };
-            localStorage.setItem('mini_rayyan_accounts', JSON.stringify(accounts));
-
-            const profile: Profile = {
-              id: newUserId,
-              email: cleanEmail,
-              created_at: accounts[cleanEmail].created_at,
-            };
-            localStore.setCurrentUser(profile);
-            setSuccessMessage('Account created and signed in! Welcome.');
-            setTimeout(() => {
-              onAuthSuccess(profile);
-              onClose();
-            }, 600);
+            // Friendly prompt to create account or auto-register if desired
+            setErrorMessage(
+              'No account found with this email. Please switch to "Create Account" above to register.'
+            );
+            setLoading(false);
+            return;
           }
         }
       }
@@ -202,7 +206,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xl animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xl animate-in fade-in duration-200">
       <div 
         className="fixed inset-0" 
         onClick={onClose}
@@ -216,11 +220,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           type="button"
           onClick={onClose}
           className="absolute top-5 right-5 p-1.5 rounded-full hover:bg-[var(--bg-canvas)] opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
+          title="Close dialog"
         >
           <X className="w-5 h-5" />
         </button>
 
-        {/* Logged in state vs Authentication Form */}
+        {/* Logged in Account Overview vs Authentication Form */}
         {currentUser ? (
           <div className="space-y-6">
             <div className="flex items-center gap-3">
@@ -228,11 +233,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold shadow-md"
                 style={{ backgroundColor: 'var(--accent-primary)', color: 'var(--accent-text)' }}
               >
-                {currentUser.email.charAt(0).toUpperCase()}
+                {currentUser.email ? currentUser.email.charAt(0).toUpperCase() : 'U'}
               </div>
               <div>
                 <h3 className="text-base font-bold font-display" style={{ color: 'var(--text-primary)' }}>
-                  User Account
+                  Active Reviewer Account
                 </h3>
                 <p className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
                   {currentUser.email}
@@ -253,6 +258,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs">
+                <span style={{ color: 'var(--text-muted)' }}>Remember Status:</span>
+                <span className="font-semibold text-emerald-400 flex items-center gap-1">
+                  <UserCheck className="w-3.5 h-3.5" />
+                  Active on this device
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
                 <span style={{ color: 'var(--text-muted)' }}>Data Persistence:</span>
                 <span className="font-mono text-[11px]" style={{ color: 'var(--accent-primary)' }}>
                   {isSupabaseConfigured ? 'Supabase Cloud PostgreSQL' : 'Local Persistent Storage'}
@@ -261,7 +273,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
 
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              All research books, query versions, deduplication clusters, and screening decisions are saved under this account.
+              All your research books, literature queries, and screening decisions remain private and saved to this account.
             </p>
 
             <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--border-subtle)]">
@@ -270,7 +282,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 onClick={onClose}
                 className="px-4 py-2 rounded-xl text-xs font-medium border border-[var(--border-subtle)] hover:bg-[var(--bg-canvas)] cursor-pointer"
               >
-                Close
+                Done
               </button>
               <button
                 type="button"
@@ -286,42 +298,89 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
         ) : (
           <div>
+            {/* Header & Tabs */}
             <div className="flex items-center gap-2 mb-2">
               <div 
-                className="w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs"
+                className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shadow-md"
                 style={{ backgroundColor: 'var(--accent-primary)', color: 'var(--accent-text)' }}
               >
-                <Lock className="w-3.5 h-3.5" />
+                <Lock className="w-4 h-4" />
               </div>
-              <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-                {isSignUp ? 'Create Reviewer Account' : 'Sign In to Mini-Rayyan'}
-              </h2>
+              <div>
+                <h2 className="text-lg font-bold font-display" style={{ color: 'var(--text-primary)' }}>
+                  {isSignUp ? 'Create Reviewer Account' : 'Sign In to Mini-Rayyan'}
+                </h2>
+                <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                  {isSignUp
+                    ? 'Register to create your personal systematic review protocols'
+                    : 'Access your clinical screening workspace & saved research books'}
+                </p>
+              </div>
             </div>
-            <p className="text-xs mb-6" style={{ color: 'var(--text-muted)' }}>
-              {isSignUp
-                ? 'Register to retain your research books, screening decisions, and query versions.'
-                : 'Sign in to access your systematic reviews and saved screening progress.'}
-            </p>
+
+            {/* Mode Switcher Tabs */}
+            <div className="flex rounded-xl bg-[var(--bg-canvas)] p-1 border border-[var(--border-subtle)] my-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSignUp(false);
+                  setErrorMessage(null);
+                }}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                  !isSignUp
+                    ? 'bg-[var(--accent-primary)] text-[var(--accent-text)] shadow-sm'
+                    : 'opacity-70 hover:opacity-100'
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSignUp(true);
+                  setErrorMessage(null);
+                }}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                  isSignUp
+                    ? 'bg-[var(--accent-primary)] text-[var(--accent-text)] shadow-sm'
+                    : 'opacity-70 hover:opacity-100'
+                }`}
+              >
+                Create Account
+              </button>
+            </div>
 
             {/* Error Message */}
             {errorMessage && (
-              <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+              <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2 animate-in fade-in">
                 <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{errorMessage}</span>
+                <span className="flex-1">{errorMessage}</span>
+                {errorMessage.includes('switch to "Create Account"') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSignUp(true);
+                      setErrorMessage(null);
+                    }}
+                    className="underline font-bold text-xs text-rose-300 ml-1 hover:text-white"
+                  >
+                    Switch
+                  </button>
+                )}
               </div>
             )}
 
             {/* Success Message */}
             {successMessage && (
-              <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
+              <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2 animate-in fade-in">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>{successMessage}</span>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-mono mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                <label className="block text-xs font-mono mb-1" style={{ color: 'var(--text-secondary)' }}>
                   Email Address
                 </label>
                 <div className="relative">
@@ -331,44 +390,52 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="researcher@hospital.org"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs border border-[var(--border-subtle)] bg-[var(--bg-canvas)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)] transition-all"
+                    className="w-full pl-9 pr-4 py-2.5 rounded-xl text-xs border border-[var(--border-subtle)] bg-[var(--bg-canvas)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)] transition-all font-sans"
                     style={{ color: 'var(--text-primary)' }}
+                    autoFocus
                   />
                   <Mail className="w-4 h-4 absolute left-3 top-3 opacity-50" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-mono mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                <label className="block text-xs font-mono mb-1" style={{ color: 'var(--text-secondary)' }}>
                   Password
                 </label>
                 <div className="relative">
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs border border-[var(--border-subtle)] bg-[var(--bg-canvas)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)] transition-all"
+                    className="w-full pl-9 pr-10 py-2.5 rounded-xl text-xs border border-[var(--border-subtle)] bg-[var(--bg-canvas)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)] transition-all font-sans"
                     style={{ color: 'var(--text-primary)' }}
                   />
                   <Lock className="w-4 h-4 absolute left-3 top-3 opacity-50" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-2.5 opacity-60 hover:opacity-100 transition-opacity p-1 cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
                 </div>
               </div>
 
               {isSignUp && (
                 <div>
-                  <label className="block text-xs font-mono mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                  <label className="block text-xs font-mono mb-1" style={{ color: 'var(--text-secondary)' }}>
                     Confirm Password
                   </label>
                   <div className="relative">
                     <input
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       required
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs border border-[var(--border-subtle)] bg-[var(--bg-canvas)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)] transition-all"
+                      className="w-full pl-9 pr-4 py-2.5 rounded-xl text-xs border border-[var(--border-subtle)] bg-[var(--bg-canvas)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)] transition-all font-sans"
                       style={{ color: 'var(--text-primary)' }}
                     />
                     <Lock className="w-4 h-4 absolute left-3 top-3 opacity-50" />
@@ -376,41 +443,51 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
               )}
 
+              {/* Remember Me Checkbox */}
+              <div className="flex items-center justify-between pt-1">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded border-[var(--border-subtle)] accent-[var(--accent-primary)] cursor-pointer"
+                  />
+                  <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+                    Remember me on this device
+                  </span>
+                </label>
+              </div>
+
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider text-white shadow-lg flex items-center justify-center gap-2 hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
-                style={{ backgroundColor: 'var(--accent-primary)' }}
+                className="w-full mt-2 py-3 px-4 rounded-xl text-xs font-bold uppercase tracking-wider text-white shadow-lg flex items-center justify-center gap-2 hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
+                style={{ backgroundColor: 'var(--accent-primary)', color: 'var(--accent-text)' }}
               >
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Processing...</span>
+                    <span>Authenticating...</span>
                   </>
                 ) : (
                   <>
-                    <span>{isSignUp ? 'Create Account' : 'Sign In'}</span>
+                    <span>{isSignUp ? 'Create Reviewer Account' : 'Sign In to Workspace'}</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
               </button>
             </form>
 
-            {/* Toggle Sign Up / Sign In */}
-            <div className="mt-5 pt-4 border-t border-[var(--border-subtle)] text-center">
+            {/* Quick Guest Bypass option */}
+            <div className="mt-4 pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px]">
+              <span style={{ color: 'var(--text-muted)' }}>Want to explore first?</span>
               <button
                 type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setErrorMessage(null);
-                  setSuccessMessage(null);
-                }}
-                className="text-xs hover:underline cursor-pointer"
+                onClick={onClose}
+                className="hover:underline font-medium cursor-pointer"
                 style={{ color: 'var(--accent-primary)' }}
               >
-                {isSignUp
-                  ? 'Already have an account? Sign In here'
-                  : "Don't have an account yet? Create one here"}
+                Continue as Guest
               </button>
             </div>
           </div>

@@ -68,7 +68,7 @@ export const SimplePicoFlow: React.FC<SimplePicoFlowProps> = ({
   onOpenAuthModal,
 }) => {
   // Query Input State
-  const [queryText, setQueryText] = useState('In adults with type 2 diabetes, does metformin compared to placebo reduce HbA1c?');
+  const [queryText, setQueryText] = useState('');
   
   // Auto-Extracted PICO State
   const [extractedPico, setExtractedPico] = useState<ExtractedPicoResult | null>(null);

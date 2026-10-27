@@ -93,13 +93,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, currentTheme,
   };
 
   const handleQuickDemoLogin = () => {
-    const demoUser = localStore.getCurrentUser() || {
-      id: '00000000-0000-0000-0000-000000000001',
-      email: 'lead.investigator@rayyan-screening.org',
+    const guestUser: Profile = {
+      id: 'guest-' + Math.random().toString(36).substring(2, 9),
+      email: 'guest.reviewer@hospital.org',
       created_at: new Date().toISOString(),
     };
-    localStore.setCurrentUser(demoUser);
-    onAuthSuccess(demoUser);
+    localStore.setCurrentUser(guestUser, false);
+    onAuthSuccess(guestUser);
   };
 
   return (
@@ -204,8 +204,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, currentTheme,
                   <Sparkles className="w-3.5 h-3.5 group-hover:scale-125 transition-transform duration-300" />
                 </div>
                 <div className="text-left">
-                  <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>Instant Evaluator Access</div>
-                  <div className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>Pre-seeded with Diabetes &amp; HF Reviews</div>
+                  <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>Guest Investigator Access</div>
+                  <div className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>Explore workspace with a clean guest session</div>
                 </div>
               </div>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" style={{ color: 'var(--accent-primary)' }} />

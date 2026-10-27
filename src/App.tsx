@@ -59,25 +59,29 @@ export default function App() {
               created_at: session.user.created_at,
             };
             setUser(profile);
+            localStore.setCurrentUser(profile, true);
             const loadedBooks = localStore.getBooks(profile.id);
             setBooks(loadedBooks);
             setActiveBookId(localStore.getActiveBookId() || loadedBooks[0]?.id || null);
+            setIsAuthModalOpen(false);
             return;
           }
         }
 
-        // Check local store for active user
+        // Check persistent local store for remembered user
         const localUser = localStore.getCurrentUser();
         if (localUser) {
           setUser(localUser);
           const loadedBooks = localStore.getBooks(localUser.id);
           setBooks(loadedBooks);
           setActiveBookId(localStore.getActiveBookId() || loadedBooks[0]?.id || null);
+          setIsAuthModalOpen(false);
         } else {
+          // If no user is logged in, do not load default content, and immediately pop up Sign In modal
           setUser(null);
-          const loadedBooks = localStore.getBooks();
-          setBooks(loadedBooks);
-          setActiveBookId(localStore.getActiveBookId() || loadedBooks[0]?.id || null);
+          setBooks([]);
+          setActiveBookId(null);
+          setIsAuthModalOpen(true);
         }
       } catch (err) {
         console.error('Initialization error:', err);
@@ -98,13 +102,15 @@ export default function App() {
             created_at: session.user.created_at,
           };
           setUser(profile);
-          localStore.setCurrentUser(profile);
+          localStore.setCurrentUser(profile, true);
           const loadedBooks = localStore.getBooks(profile.id);
           setBooks(loadedBooks);
+          setIsAuthModalOpen(false);
         } else {
           setUser(null);
-          localStore.setCurrentUser(null);
-          setBooks(localStore.getBooks());
+          localStore.setCurrentUser(null, false);
+          setBooks([]);
+          setIsAuthModalOpen(true);
         }
       });
       return () => subscription.unsubscribe();
@@ -113,10 +119,10 @@ export default function App() {
 
   const handleAuthSuccess = (authenticatedUser: Profile) => {
     setUser(authenticatedUser);
-    localStore.setCurrentUser(authenticatedUser);
     const loadedBooks = localStore.getBooks(authenticatedUser.id);
     setBooks(loadedBooks);
-    setActiveBookId(localStore.getActiveBookId() || loadedBooks[0]?.id || null);
+    setActiveBookId(loadedBooks[0]?.id || null);
+    setIsAuthModalOpen(false);
     showToast(`Signed in as ${authenticatedUser.email}`);
   };
 
@@ -124,12 +130,12 @@ export default function App() {
     if (isSupabaseConfigured && supabase) {
       await supabase.auth.signOut();
     }
-    localStore.setCurrentUser(null);
+    localStore.setCurrentUser(null, false);
     setUser(null);
-    const fallbackBooks = localStore.getBooks();
-    setBooks(fallbackBooks);
-    setActiveBookId(fallbackBooks[0]?.id || null);
-    showToast('Signed out. Switched to guest mode.');
+    setBooks([]);
+    setActiveBookId(null);
+    setIsAuthModalOpen(true);
+    showToast('Signed out successfully.');
   };
 
   const handleCreateBook = (title: string, description: string, pico: PicoConfig) => {
