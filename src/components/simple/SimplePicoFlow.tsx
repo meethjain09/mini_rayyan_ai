@@ -41,6 +41,7 @@ interface SimplePicoFlowProps {
   onOpenAdvancedMode?: () => void;
   user?: Profile | null;
   onOpenAuthModal?: () => void;
+  onOpenGuide?: () => void;
 }
 
 const SAMPLE_QUERIES = [
@@ -66,6 +67,7 @@ export const SimplePicoFlow: React.FC<SimplePicoFlowProps> = ({
   onOpenAdvancedMode,
   user,
   onOpenAuthModal,
+  onOpenGuide,
 }) => {
   // Query Input State
   const [queryText, setQueryText] = useState('');
@@ -272,16 +274,30 @@ export const SimplePicoFlow: React.FC<SimplePicoFlowProps> = ({
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-6">
       {/* Page Title & Clinical Subtitle */}
-      <div className="mb-6 pb-4 border-b border-[var(--border-subtle)]">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: 'var(--accent-primary)' }} />
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight font-display" style={{ color: 'var(--text-primary)' }}>
-            Simple PICO Screener
-          </h1>
+      <div className="mb-6 pb-4 border-b border-[var(--border-subtle)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: 'var(--accent-primary)' }} />
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight font-display" style={{ color: 'var(--text-primary)' }}>
+              Simple PICO Screener
+            </h1>
+          </div>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+            Enter a plain-English clinical question &rarr; Automatic PICO extraction &rarr; Review &amp; confirm &rarr; Rapid literature screening
+          </p>
         </div>
-        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-          Enter a plain-English clinical question &rarr; Automatic PICO extraction &rarr; Review &amp; confirm &rarr; Rapid literature screening
-        </p>
+        {onOpenGuide && (
+          <button
+            type="button"
+            onClick={onOpenGuide}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-[var(--border-subtle)] hover:border-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/10 transition-all cursor-pointer self-start sm:self-auto"
+            style={{ color: 'var(--text-secondary)' }}
+            title="Read comprehensive platform guide and learn systematic review methodology"
+          >
+            <HelpCircle className="w-3.5 h-3.5" style={{ color: 'var(--accent-primary)' }} />
+            <span>How It Works Guide</span>
+          </button>
+        )}
       </div>
 
       {/* ========================================================================= */}

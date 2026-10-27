@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   GitCompare,
+  HelpCircle,
 } from 'lucide-react';
 import { ResearchBook, Profile, PicoConfig, QueryVersion } from '../../types/database';
 import { ThemeMode } from '../../types/theme';
@@ -28,6 +29,7 @@ import { ClinicalQueryInterface } from '../query/ClinicalQueryInterface';
 import { FetchAndDeduplicateView } from '../fetch/FetchAndDeduplicateView';
 import { ScreeningDashboard } from '../screening/ScreeningDashboard';
 import { Level2LoopDiffView } from '../loop/Level2LoopDiffView';
+import { PlatformGuideView } from '../guide/PlatformGuideView';
 
 interface ResearchBooksDashboardProps {
   user: Profile;
@@ -40,6 +42,7 @@ interface ResearchBooksDashboardProps {
   currentTheme: ThemeMode;
   onThemeChange: (theme: ThemeMode) => void;
   onSwitchToSimpleMode?: () => void;
+  initialTab?: 'books' | 'query' | 'fetch' | 'screening' | 'loop' | 'guide';
 }
 
 export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
@@ -53,11 +56,12 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
   currentTheme,
   onThemeChange,
   onSwitchToSimpleMode,
+  initialTab,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'books' | 'query' | 'fetch' | 'screening' | 'loop'>('books');
+  const [activeTab, setActiveTab] = useState<'books' | 'query' | 'fetch' | 'screening' | 'loop' | 'guide'>(initialTab || 'books');
 
   // New Book Form State
   const [newTitle, setNewTitle] = useState('');
@@ -358,9 +362,21 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
             <GitCompare className="w-3.5 h-3.5" />
             <span>Query Loop &amp; Diff</span>
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('guide')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'guide'
+                ? 'theme-primary-btn shadow-md'
+                : 'opacity-70 hover:opacity-100 hover:text-[var(--accent-primary)]'
+            }`}
+          >
+            <HelpCircle className="w-3.5 h-3.5" />
+            <span>Platform Guide</span>
+          </button>
         </div>
 
-        {!activeBook && activeTab !== 'books' ? (
+        {!activeBook && activeTab !== 'books' && activeTab !== 'guide' ? (
           <div className="mt-8 text-center py-16 px-4 border border-dashed rounded-3xl theme-glass-base" style={{ borderColor: 'var(--border-subtle)' }}>
             <Compass className="w-12 h-12 mx-auto mb-3 opacity-40" />
             <h3 className="text-base font-semibold font-display" style={{ color: 'var(--text-primary)' }}>No Research Protocol Created Yet</h3>
@@ -387,6 +403,12 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
               )}
             </div>
           </div>
+        ) : activeTab === 'guide' ? (
+          <PlatformGuideView
+            currentTheme={currentTheme}
+            onStartSimpleMode={onSwitchToSimpleMode}
+            onOpenAdvancedPhase={(phase) => setActiveTab(phase)}
+          />
         ) : activeTab === 'query' && activeBook ? (
           <ClinicalQueryInterface
             activeBook={activeBook}

@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { AuthModal } from './components/auth/AuthModal';
 import { ResearchBooksDashboard } from './components/dashboard/ResearchBooksDashboard';
 import { SimplePicoFlow } from './components/simple/SimplePicoFlow';
+import { PlatformGuideView } from './components/guide/PlatformGuideView';
 import { ThemeSwitcher } from './components/ui/ThemeSwitcher';
 import { localStore, supabase, isSupabaseConfigured } from './lib/supabase';
 import { Profile, ResearchBook, PicoConfig } from './types/database';
@@ -18,6 +19,8 @@ import {
   LogOut,
   ShieldCheck,
   Sparkles,
+  HelpCircle,
+  BookOpen,
 } from 'lucide-react';
 
 export default function App() {
@@ -26,7 +29,8 @@ export default function App() {
   const [activeBookId, setActiveBookId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'simple' | 'advanced'>('simple');
+  const [viewMode, setViewMode] = useState<'simple' | 'advanced' | 'guide'>('simple');
+  const [advancedInitialTab, setAdvancedInitialTab] = useState<'books' | 'query' | 'fetch' | 'screening' | 'loop' | 'guide'>('books');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof window !== 'undefined') {
@@ -267,6 +271,18 @@ export default function App() {
                 </button>
               )}
 
+              {/* How It Works Guide Toggle */}
+              <button
+                type="button"
+                onClick={() => setViewMode('guide')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono border border-[var(--border-subtle)] hover:border-[var(--accent-primary)] hover:bg-[var(--bg-card)] transition-all cursor-pointer"
+                style={{ color: 'var(--text-secondary)' }}
+                title="Open comprehensive platform guide and learn systematic review methodology"
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">How It Works</span>
+              </button>
+
               {/* Mode Toggle */}
               <button
                 type="button"
@@ -282,6 +298,99 @@ export default function App() {
           </header>
         )}
 
+        {/* Global Navigation Header in Guide Mode */}
+        {viewMode === 'guide' && (
+          <header className="sticky top-0 z-40 theme-glass-header border-b border-[var(--border-subtle)] px-4 sm:px-8 py-3.5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button 
+                type="button"
+                onClick={() => setViewMode('simple')}
+                className="w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs shadow-md cursor-pointer hover:scale-105 transition-transform"
+                style={{ backgroundColor: 'var(--accent-primary)', color: 'var(--accent-text)' }}
+                title="Go to Home"
+              >
+                R
+              </button>
+              <div>
+                <span className="font-bold text-sm tracking-tight" style={{ color: 'var(--text-primary)' }}>
+                  Mini-Rayyan
+                </span>
+                <span className="text-[10px] font-mono ml-2 opacity-60">
+                  Platform Guide &amp; Architecture
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              {/* Back to Simple Mode */}
+              <button
+                type="button"
+                onClick={() => setViewMode('simple')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono border border-[var(--border-subtle)] hover:border-[var(--accent-primary)] hover:bg-[var(--bg-card)] transition-all cursor-pointer"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                <Sparkles className="w-3.5 h-3.5" style={{ color: 'var(--accent-primary)' }} />
+                <span className="hidden sm:inline">Simple Mode</span>
+              </button>
+
+              {/* Open Advanced Mode */}
+              <button
+                type="button"
+                onClick={() => setViewMode('advanced')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono border border-[var(--border-subtle)] hover:border-[var(--accent-primary)] hover:bg-[var(--bg-card)] transition-all cursor-pointer"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Advanced Mode</span>
+              </button>
+
+              {/* Theme Switcher */}
+              <ThemeSwitcher currentTheme={theme} onThemeChange={setTheme} />
+
+              {/* User Account / Sign In Button */}
+              {user ? (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsAuthModalOpen(true)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs border border-[var(--border-subtle)] bg-[var(--bg-card)] hover:border-[var(--accent-primary)] transition-all cursor-pointer"
+                    title="Account Settings"
+                  >
+                    <div 
+                      className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold"
+                      style={{ backgroundColor: 'var(--accent-primary)', color: 'var(--accent-text)' }}
+                    >
+                      {user.email.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="font-mono text-[11px] hidden md:inline truncate max-w-[140px]" style={{ color: 'var(--text-secondary)' }}>
+                      {user.email}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="p-1.5 rounded-xl text-xs border border-[var(--border-subtle)] hover:border-rose-500/40 hover:bg-rose-500/10 text-rose-400 transition-all cursor-pointer"
+                    title="Sign Out"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-[var(--accent-primary)]/40 bg-[var(--accent-primary)]/10 hover:bg-[var(--accent-primary)]/20 transition-all cursor-pointer"
+                  style={{ color: 'var(--accent-primary)' }}
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Sign In</span>
+                </button>
+              )}
+            </div>
+          </header>
+        )}
+
         {/* Main Content Area */}
         <main className="flex-1">
           {viewMode === 'simple' ? (
@@ -289,6 +398,17 @@ export default function App() {
               onOpenAdvancedMode={() => setViewMode('advanced')}
               user={user}
               onOpenAuthModal={() => setIsAuthModalOpen(true)}
+              onOpenGuide={() => setViewMode('guide')}
+            />
+          ) : viewMode === 'guide' ? (
+            <PlatformGuideView
+              currentTheme={theme}
+              onStartSimpleMode={() => setViewMode('simple')}
+              onOpenAdvancedPhase={(phase) => {
+                setAdvancedInitialTab(phase);
+                setViewMode('advanced');
+              }}
+              onCloseGuide={() => setViewMode('simple')}
             />
           ) : (
             <ResearchBooksDashboard
@@ -302,6 +422,7 @@ export default function App() {
               currentTheme={theme}
               onThemeChange={setTheme}
               onSwitchToSimpleMode={() => setViewMode('simple')}
+              initialTab={advancedInitialTab}
             />
           )}
         </main>
