@@ -145,7 +145,7 @@ export const FetchAndDeduplicateView: React.FC<FetchAndDeduplicateViewProps> = (
             Literature Ingestion &amp; Deduplication Pipeline
           </h2>
           <p className="mt-2 text-xs sm:text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-            Search from inside the tool through PubMed E-utilities and Europe PMC REST APIs. Our 3-tier deterministic deduplication pipeline clusters identical papers (DOI $\rightarrow$ PMID $\rightarrow$ Title/Year/Author) and hides duplicates without hard deletion.
+            Search from inside the tool through PubMed E-utilities and Europe PMC REST APIs. Our 3-tier deterministic deduplication pipeline clusters identical papers (DOI &rarr; PMID &rarr; Title/Year/Author) and hides duplicates without hard deletion.
           </p>
         </div>
       </div>

@@ -476,7 +476,7 @@ export const Level2LoopDiffView: React.FC<Level2LoopDiffViewProps> = ({
                   Q1: What happens when a record you excluded appears again under a new query?
                 </h4>
                 <p className="text-xs font-sans leading-relaxed text-secondary">
-                  <strong>Engine Resolution:</strong> Mini-Rayyan assigns screening decisions to the <em>record cluster</em> (<code className="font-mono text-primary">cluster_id</code>) rather than to the query version. When a previously excluded paper is retrieved by Query Version $N+1$, the 3-tier deduplication engine matches its DOI, PMID, or normalized Title+Year+Author hash and links it to the existing cluster. The system automatically preserves its <code className="font-mono text-rose-400 font-bold">status = 'exclude'</code>, its specific exclusion reason, and the reviewer's clinical notes. The reviewer is never asked to re-screen the same study.
+                  <strong>Engine Resolution:</strong> Mini-Rayyan assigns screening decisions to the <em>record cluster</em> (<code className="font-mono text-primary">cluster_id</code>) rather than to the query version. When a previously excluded paper is retrieved by Query Version vN+1, the 3-tier deduplication engine matches its DOI, PMID, or normalized Title+Year+Author hash and links it to the existing cluster. The system automatically preserves its <code className="font-mono text-rose-400 font-bold">status = 'exclude'</code>, its specific exclusion reason, and the reviewer's clinical notes. The reviewer is never asked to re-screen the same study.
                 </p>
               </div>
 

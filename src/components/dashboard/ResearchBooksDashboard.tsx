@@ -177,11 +177,11 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
 
       {/* Top Bar Navigation with Dynamic Frosted Glass */}
       <header className="sticky top-0 z-40 theme-glass-base">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-6">
-          {/* Zone 1: Single element brand wordmark */}
-          <div className="flex items-center gap-3 shrink-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          {/* Left: Brand and Active Workspace Switcher */}
+          <div className="flex items-center gap-3 sm:gap-4 shrink-0 min-w-0">
             <div 
-              className="w-9 h-9 rounded-xl p-[1.5px] shadow-lg"
+              className="w-9 h-9 rounded-xl p-[1.5px] shadow-lg shrink-0"
               style={{ background: 'var(--border-conic)' }}
             >
               <div 
@@ -191,102 +191,28 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
                 <Compass className="w-4 h-4" style={{ color: 'var(--accent-primary)' }} />
               </div>
             </div>
-            <a href="/" className="text-base font-extrabold tracking-tight font-display whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>
+            <a href="/" className="text-base font-extrabold tracking-tight font-display whitespace-nowrap shrink-0" style={{ color: 'var(--text-primary)' }}>
               Mini<span style={{ color: 'var(--accent-primary)' }}>Rayyan</span>
             </a>
-          </div>
 
-          {/* Zone 2: Navigation Links */}
-          <nav className="hidden md:flex items-center gap-6 text-xs font-medium">
-            <button
-              onClick={() => setActiveTab('books')}
-              className={`transition-opacity whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'books' ? 'font-bold' : 'opacity-70 hover:opacity-100'
-              }`}
-              style={{ color: activeTab === 'books' ? 'var(--accent-primary)' : 'var(--text-primary)' }}
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>Research Books</span>
-              <span className="font-mono text-[10px]" style={{ color: 'var(--accent-primary)' }}>({books.length})</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('query')}
-              className={`transition-opacity whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'query' ? 'font-bold' : 'opacity-70 hover:opacity-100'
-              }`}
-              style={{ color: activeTab === 'query' ? 'var(--accent-primary)' : 'var(--text-primary)' }}
-            >
-              <Sparkles className="w-3.5 h-3.5" style={{ color: 'var(--accent-primary)' }} />
-              <span>Query &amp; PICO</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('fetch')}
-              className={`transition-opacity whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'fetch' ? 'font-bold' : 'opacity-70 hover:opacity-100'
-              }`}
-              style={{ color: activeTab === 'fetch' ? 'var(--accent-primary)' : 'var(--text-primary)' }}
-            >
-              <GitMerge className="w-3.5 h-3.5" style={{ color: 'var(--accent-primary)' }} />
-              <span>Fetch &amp; Deduplicate</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('screening')}
-              className={`transition-opacity whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'screening' ? 'font-bold' : 'opacity-70 hover:opacity-100'
-              }`}
-              style={{ color: activeTab === 'screening' ? 'var(--accent-primary)' : 'var(--text-primary)' }}
-            >
-              <ShieldCheck className="w-3.5 h-3.5" style={{ color: 'var(--accent-primary)' }} />
-              <span>Screening Hub</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('loop')}
-              className={`transition-opacity whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'loop' ? 'font-bold' : 'opacity-70 hover:opacity-100'
-              }`}
-              style={{ color: activeTab === 'loop' ? 'var(--accent-primary)' : 'var(--text-primary)' }}
-            >
-              <GitCompare className="w-3.5 h-3.5" style={{ color: 'var(--accent-primary)' }} />
-              <span>Query Loop &amp; Diff</span>
-            </button>
-          </nav>
-
-          {/* Zone 3: Actions, Theme Switcher & Workspace Switcher */}
-          <div className="flex items-center gap-2.5 shrink-0">
-            {onSwitchToSimpleMode && (
-              <button
-                type="button"
-                onClick={onSwitchToSimpleMode}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono border border-[var(--accent-primary)]/40 bg-[var(--accent-primary)]/10 hover:bg-[var(--accent-primary)]/20 transition-all cursor-pointer"
-                style={{ color: 'var(--accent-primary)' }}
-                title="Switch to Simplified Single-Question Flow"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span className="font-semibold">Simple Mode</span>
-              </button>
-            )}
-
-            {/* Live Theme Palette Switcher */}
-            <ThemeSwitcher currentTheme={currentTheme} onThemeChange={onThemeChange} />
-
-            {/* Workspace Switcher */}
+            {/* Compact Workspace Indicator & Switcher */}
             {books.length > 0 && (
-              <div className="relative group">
+              <div className="relative group shrink-0 hidden sm:block">
                 <button
                   type="button"
-                  className="flex items-center gap-2 theme-glass-input text-xs rounded-xl px-3 py-1.5 transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 theme-glass-input text-xs rounded-xl px-2.5 py-1.5 transition-all cursor-pointer border border-[var(--border-subtle)] hover:border-[var(--accent-primary)]/50"
                   style={{ color: 'var(--text-secondary)' }}
                 >
-                  <FolderGit2 className="w-3.5 h-3.5" style={{ color: 'var(--accent-primary)' }} />
-                  <span className="font-mono hidden lg:inline opacity-70">Active:</span>
-                  <span className="font-medium max-w-[130px] truncate" style={{ color: 'var(--text-primary)' }}>
+                  <FolderGit2 className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--accent-primary)' }} />
+                  <span className="font-mono text-[10px] opacity-60 uppercase">Book:</span>
+                  <span className="font-medium max-w-[130px] md:max-w-[170px] truncate" style={{ color: 'var(--text-primary)' }}>
                     {activeBook?.title || 'Select Book'}
                   </span>
-                  <ChevronDown className="w-3 h-3 opacity-60" />
+                  <ChevronDown className="w-3 h-3 opacity-60 shrink-0" />
                 </button>
 
                 {/* Dropdown */}
-                <div className="absolute right-0 mt-2 w-80 theme-glass-elevated rounded-2xl py-2 hidden group-hover:block z-50">
+                <div className="absolute left-0 mt-2 w-80 theme-glass-elevated rounded-2xl py-2 hidden group-hover:block z-50 shadow-2xl border border-[var(--border-elevated)]">
                   <div 
                     className="px-4 py-2 text-[10px] font-mono uppercase tracking-widest border-b mb-1"
                     style={{ color: 'var(--text-muted)', borderColor: 'var(--border-subtle)' }}
@@ -298,7 +224,7 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
                       <button
                         key={b.id}
                         onClick={() => onSelectBook(b.id)}
-                        className={`w-full text-left px-4 py-2.5 text-xs flex items-center justify-between transition-colors ${
+                        className={`w-full text-left px-4 py-2.5 text-xs flex items-center justify-between transition-colors cursor-pointer ${
                           b.id === activeBookId ? 'font-bold' : 'opacity-80 hover:opacity-100 hover:bg-white/5'
                         }`}
                         style={{
@@ -314,7 +240,7 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
                   <div className="pt-2 border-t px-3" style={{ borderColor: 'var(--border-subtle)' }}>
                     <button
                       onClick={() => setIsCreateModalOpen(true)}
-                      className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium hover:brightness-110 transition-colors"
+                      className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium hover:brightness-110 transition-colors cursor-pointer"
                       style={{ color: 'var(--accent-primary)' }}
                     >
                       <Plus className="w-3.5 h-3.5" />
@@ -324,20 +250,42 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
                 </div>
               </div>
             )}
+          </div>
 
-            {/* Primary Action Button with Animated Masked Gradient Border */}
+          {/* Right: Actions, Theme Switcher & Logout (Spacious and never overflowed) */}
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            {/* Create New Protocol Button */}
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="theme-primary-btn px-4 py-1.5 text-xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
+              className="theme-primary-btn px-3 sm:px-4 py-1.5 text-xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
+              title="Create new systematic review research book"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>New Book</span>
             </button>
 
+            {/* Simple Mode Toggle */}
+            {onSwitchToSimpleMode && (
+              <button
+                type="button"
+                onClick={onSwitchToSimpleMode}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-mono border border-[var(--accent-primary)]/40 bg-[var(--accent-primary)]/10 hover:bg-[var(--accent-primary)]/20 transition-all cursor-pointer whitespace-nowrap shrink-0"
+                style={{ color: 'var(--accent-primary)' }}
+                title="Switch to Simplified Single-Question Flow"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span className="font-semibold hidden sm:inline">Simple Mode</span>
+              </button>
+            )}
+
+            {/* Live Theme Palette Switcher */}
+            <ThemeSwitcher currentTheme={currentTheme} onThemeChange={onThemeChange} />
+
+            {/* Sign Out Button */}
             <button
               onClick={onLogout}
               title={`Signed in as ${user.email} (Click to sign out)`}
-              className="p-2 opacity-60 hover:opacity-100 hover:text-red-400 rounded-xl transition-all shrink-0 cursor-pointer"
+              className="p-2 opacity-60 hover:opacity-100 hover:text-red-400 rounded-xl transition-all shrink-0 cursor-pointer border border-[var(--border-subtle)] hover:border-red-400/40"
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -347,67 +295,68 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
 
       {/* Main Workspace Stage */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
-        {/* Workspace Section Navigation Tabs */}
-        <div className="flex items-center gap-2 mb-6 p-1.5 rounded-2xl theme-glass-input w-fit">
+        {/* Single Primary Workspace Navigation Menu */}
+        <div className="flex items-center gap-1.5 mb-6 p-1.5 rounded-2xl theme-glass-input w-fit max-w-full overflow-x-auto">
           <button
             type="button"
             onClick={() => setActiveTab('books')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'books'
                 ? 'theme-primary-btn shadow-md'
                 : 'opacity-70 hover:opacity-100'
             }`}
           >
             <BookOpen className="w-3.5 h-3.5" />
-            <span>All Research Books</span>
+            <span>Research Books</span>
+            <span className="font-mono text-[10px] opacity-75">({books.length})</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('query')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'query'
                 ? 'theme-primary-btn shadow-md'
                 : 'opacity-70 hover:opacity-100'
             }`}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Clinical Query &amp; PICO (Phase 2)</span>
+            <span>Query &amp; PICO</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('fetch')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'fetch'
                 ? 'theme-primary-btn shadow-md'
                 : 'opacity-70 hover:opacity-100'
             }`}
           >
             <GitMerge className="w-3.5 h-3.5" />
-            <span>Fetch &amp; Deduplicate (Phase 3)</span>
+            <span>Fetch &amp; Deduplicate</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('screening')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'screening'
                 ? 'theme-primary-btn shadow-md'
                 : 'opacity-70 hover:opacity-100'
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Screening &amp; PICO (Phase 4)</span>
+            <span>Screening Hub</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('loop')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'loop'
                 ? 'theme-primary-btn shadow-md'
                 : 'opacity-70 hover:opacity-100'
             }`}
           >
             <GitCompare className="w-3.5 h-3.5" />
-            <span>Level 2 Loop &amp; Diff (Phase 5)</span>
+            <span>Query Loop &amp; Diff</span>
           </button>
         </div>
 

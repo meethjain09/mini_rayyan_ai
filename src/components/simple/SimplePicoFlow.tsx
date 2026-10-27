@@ -270,62 +270,18 @@ export const SimplePicoFlow: React.FC<SimplePicoFlowProps> = ({
   const countDuplicates = duplicateRecords.length;
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 py-8">
-      {/* Top Header / Mode Switcher */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-6 mb-8 border-b border-[var(--border-subtle)] gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: 'var(--accent-primary)' }} />
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-              Mini-Rayyan <span className="font-normal text-sm opacity-60">Simple Screener</span>
-            </h1>
-          </div>
-          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-            Plain-English question &rarr; Auto PICO Check &rarr; Prompt to confirm &rarr; Fast screening
-          </p>
+    <div className="w-full max-w-6xl mx-auto px-4 py-6">
+      {/* Page Title & Clinical Subtitle */}
+      <div className="mb-6 pb-4 border-b border-[var(--border-subtle)]">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: 'var(--accent-primary)' }} />
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight font-display" style={{ color: 'var(--text-primary)' }}>
+            Simple PICO Screener
+          </h1>
         </div>
-
-        <div className="flex items-center gap-2.5">
-          {user ? (
-            <button
-              type="button"
-              onClick={onOpenAuthModal}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs border border-[var(--border-subtle)] bg-[var(--bg-card)] hover:border-[var(--accent-primary)] transition-all cursor-pointer"
-              title="Manage Reviewer Account"
-            >
-              <div 
-                className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold"
-                style={{ backgroundColor: 'var(--accent-primary)', color: 'var(--accent-text)' }}
-              >
-                {user.email.charAt(0).toUpperCase()}
-              </div>
-              <span className="font-mono text-[11px] truncate max-w-[150px]" style={{ color: 'var(--text-secondary)' }}>
-                {user.email}
-              </span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onOpenAuthModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-[var(--accent-primary)]/40 bg-[var(--accent-primary)]/10 hover:bg-[var(--accent-primary)]/20 transition-all cursor-pointer"
-              style={{ color: 'var(--accent-primary)' }}
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>Sign In / Register</span>
-            </button>
-          )}
-
-          {onOpenAdvancedMode && (
-            <button
-              onClick={onOpenAdvancedMode}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-mono border border-[var(--border-subtle)] hover:border-[var(--accent-primary)] hover:bg-[var(--bg-card)] transition-all cursor-pointer"
-              style={{ color: 'var(--text-muted)' }}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Advanced Workspace</span>
-            </button>
-          )}
-        </div>
+        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+          Enter a plain-English clinical question &rarr; Automatic PICO extraction &rarr; Review &amp; confirm &rarr; Rapid literature screening
+        </p>
       </div>
 
       {/* ========================================================================= */}

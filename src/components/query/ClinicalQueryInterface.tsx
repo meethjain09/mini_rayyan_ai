@@ -144,23 +144,25 @@ export const ClinicalQueryInterface: React.FC<ClinicalQueryInterfaceProps> = ({
           }}
           className="space-y-4"
         >
-          <div className="relative">
-            <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 opacity-50" />
+          <div className="relative flex items-center">
+            <Search className="w-5 h-5 absolute left-4 opacity-50 pointer-events-none z-10" />
             <input
               type="text"
               value={rawQuery}
               onChange={(e) => setRawQuery(e.target.value)}
               placeholder="e.g. In adults with type 2 diabetes, does metformin compared to placebo reduce HbA1c?"
-              className="w-full pl-12 pr-32 py-4 theme-glass-input rounded-2xl text-xs sm:text-sm placeholder:opacity-40 focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] font-sans"
+              className="w-full pl-12 pr-36 py-4 theme-glass-input rounded-2xl text-xs sm:text-sm placeholder:opacity-40 focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] font-sans"
             />
-            <button
-              type="submit"
-              disabled={!rawQuery.trim()}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 theme-primary-btn px-4 py-2 text-xs flex items-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Extract PICO</span>
-            </button>
+            <div className="absolute right-2.5 z-10">
+              <button
+                type="submit"
+                disabled={!rawQuery.trim()}
+                className="theme-primary-btn px-4 py-2 text-xs flex items-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Extract PICO</span>
+              </button>
+            </div>
           </div>
 
           {/* Date Filter & Search Limits */}

@@ -440,7 +440,9 @@
 
 /* Primary Button with Theme Gradient & Animated Border */
 .theme-primary-btn {
-  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 0.875rem;
   background: var(--accent-gradient);
   color: var(--accent-text);
@@ -448,6 +450,10 @@
   transition: all 0.3s ease;
   box-shadow: 0 10px 25px -5px var(--accent-glow);
   overflow: hidden;
+}
+
+.theme-primary-btn:not(.absolute) {
+  position: relative;
 }
 
 .theme-primary-btn:hover {
