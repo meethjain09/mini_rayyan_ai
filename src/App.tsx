@@ -168,6 +168,14 @@ export default function App() {
     showToast(`Archived workspace "${doomed?.title || bookId}"`);
   };
 
+  const handleSeedDemo = () => {
+    const demoBook = localStore.seedDemoDataset(user?.id);
+    const updatedBooks = localStore.getBooks(user?.id);
+    setBooks(updatedBooks);
+    setActiveBookId(demoBook.id);
+    showToast('Loaded Hackathon Demo Workspace (Protocols, Clustered Records, Decisions & PRISMA)!');
+  };
+
   if (loading) {
     return (
       <div 
@@ -226,7 +234,32 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              {/* Hackathon Dual-Engine Database Status Indicator */}
+              <div 
+                className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border"
+                style={{
+                  backgroundColor: isSupabaseConfigured ? 'rgba(56, 189, 248, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                  borderColor: isSupabaseConfigured ? 'rgba(56, 189, 248, 0.3)' : 'rgba(16, 185, 129, 0.3)',
+                  color: isSupabaseConfigured ? '#38bdf8' : '#10b981',
+                }}
+                title={isSupabaseConfigured ? 'Connected to remote Supabase PostgreSQL database' : 'Running on high-performance Localhost Database (100% Offline Ready)'}
+              >
+                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: isSupabaseConfigured ? '#38bdf8' : '#10b981' }} />
+                <span>{isSupabaseConfigured ? 'Cloud: Supabase' : 'Local DB: Offline'}</span>
+              </div>
+
+              {/* Instant Hackathon Demo Dataset Seeder */}
+              <button
+                type="button"
+                onClick={handleSeedDemo}
+                className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-mono border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 transition-all cursor-pointer whitespace-nowrap"
+                title="Seed benchmark systematic review data (T2D protocol, v1/v2 queries, deduplicated studies, decisions & PRISMA)"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Seed Demo</span>
+              </button>
+
               {/* Theme Switcher */}
               <ThemeSwitcher currentTheme={theme} onThemeChange={setTheme} />
 
@@ -423,6 +456,7 @@ export default function App() {
               onThemeChange={setTheme}
               onSwitchToSimpleMode={() => setViewMode('simple')}
               initialTab={advancedInitialTab}
+              onSeedDemo={handleSeedDemo}
             />
           )}
         </main>

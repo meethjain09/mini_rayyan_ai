@@ -14,20 +14,42 @@ An AI-assisted systematic review screening platform designed for clinical resear
 ```bash
 npm install
 ```
+*(Note: esbuild dependency has been streamlined so modern npm installs cleanly without ERESOLVE errors).*
 
-### 3. Environment Variables (Optional)
-Copy `.env.example` to `.env.local`:
+### 3. Environment Variables (100% Optional)
+Copy `.env.example` to `.env.local` if you wish to use remote Supabase:
 ```bash
 cp .env.example .env.local
 ```
-- `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`: If you want remote PostgreSQL and real-time Supabase Auth. (If omitted, the platform runs in persistent offline-ready local storage mode).
-- `GEMINI_API_KEY`: Optional server-side or client Gemini NLP key.
+- **Localhost Mode (Default & Offline Ready):** If you don't configure any variables, the app runs entirely on its built-in relational Localhost Database with offline landmark clinical trial ingestion. Ideal for offline presentations!
+- **Cloud Mode (Production):** Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to sync to remote PostgreSQL.
 
 ### 4. Run Development Server
 ```bash
 npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## 🏆 Hackathon Presentation & Dual-Engine Architecture
+
+This project is specifically engineered with a **Dual-Engine Architecture** to excel in hackathon judging:
+
+1. **Localhost Offline Mode (`http://localhost:3000`)**:
+   - Runs with **zero external dependencies** — even if the hackathon venue has no WiFi or you are in airplane mode!
+   - Full relational database emulation stored in the browser (users, sessions, protocols, queries $v_1 \rightarrow v_2$, deduplicated clusters, screening decisions, and immutable audit logs).
+   - Ingests offline landmark clinical trial corpora (EMPA-REG, SUSTAIN-6, UKPDS 34, DELIVER, AcT stroke trial, etc.) with real PubMed/Europe PMC metadata.
+2. **One-Click Demo Seeder (`Seed Demo` button)**:
+   - Click the amber **`Seed Demo`** button in the header or on empty states to instantly populate a complete systematic review workspace:
+     - Formulated PICO protocol for Cardiorenal outcomes in Type 2 Diabetes.
+     - Iterative query versions ($v_1 \rightarrow v_2$) demonstrating the Level 2 diff loop.
+     - Clustered trial pairs demonstrating Tier 1 (DOI), Tier 2 (PMID), and Tier 3 deduplication.
+     - Pre-recorded decisions and live calculations for the **PRISMA 2020 SVG diagram**.
+3. **Cloud Production Mode (Vercel + Supabase)**:
+   - Ready for instant deployment on Vercel (`dist` SPA preset).
+   - Direct PostgreSQL database integration via `supabase-schema.sql`.
+   - Clear visual status badge in the header: `[● Local DB: Offline]` vs `[● Cloud: Supabase]`.
 
 ---
 

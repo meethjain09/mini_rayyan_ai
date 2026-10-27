@@ -412,6 +412,340 @@ class LocalStorageStore {
 
     return target;
   }
+
+  // --------------------------------------------------------------------------
+  // HACKATHON OFFLINE BENCHMARK SEEDER
+  // Populates full protocol, versions v1 & v2, canonical clustered records,
+  // decisions, and audit trail for instant offline judge presentation!
+  // --------------------------------------------------------------------------
+  seedDemoDataset(userId?: string): ResearchBook {
+    const effectiveUserId = userId || this.getCurrentUser()?.id || 'reviewer-local-demo';
+    const bookId = 'book-hackathon-demo-t2d';
+
+    const demoBook: ResearchBook = {
+      id: bookId,
+      user_id: effectiveUserId,
+      title: 'GLP-1 Receptor Agonists & SGLT2 Inhibitors for Cardiorenal Protection in Type 2 Diabetes',
+      description: 'Systematic review evaluating 3-point MACE, cardiovascular mortality, and renal progression across landmark multicenter double-blind randomized controlled trials.',
+      pico_config: {
+        p: 'Adult patients (age >= 18) with type 2 diabetes mellitus and established cardiovascular or renal risk',
+        i: 'GLP-1 receptor agonists (Semaglutide, Liraglutide) or SGLT2 inhibitors (Empagliflozin, Dapagliflozin)',
+        c: 'Placebo or standard background glycemic control',
+        o: 'Composite 3-point MACE (cardiovascular death, nonfatal MI, nonfatal stroke), heart failure hospitalization, eGFR decline',
+        inclusionCriteria: [
+          'Phase III/IV double-blind randomized controlled trials',
+          'Follow-up duration >= 52 weeks',
+          'Confirmed baseline type 2 diabetes mellitus diagnosis',
+        ],
+        exclusionCriteria: [
+          'Animal or non-human experimental models',
+          'Observational, retrospective, or non-randomized cohorts',
+          'Pediatric populations (< 18 years)',
+        ],
+      },
+      created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    // Save or update book in list
+    const books = this.getBooks().filter((b) => b.id !== bookId);
+    books.unshift(demoBook);
+    this.saveBooks(books);
+    this.setActiveBookId(bookId);
+
+    // Seed Query Versions v1 and v2 for Level 2 Diff demonstration
+    const qv1: QueryVersion = {
+      id: 'qv-demo-v1',
+      book_id: bookId,
+      version_number: 1,
+      raw_user_query: 'In adults with type 2 diabetes, does metformin or SGLT2 inhibitors reduce cardiovascular death?',
+      boolean_query: '("Type 2 Diabetes"[Title/Abstract]) AND ("Metformin"[Title/Abstract] OR "SGLT2"[Title/Abstract]) AND ("Cardiovascular Death"[Title/Abstract])',
+      date_start: '2015',
+      date_end: '2026',
+      total_hits: 6,
+      created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+    };
+
+    const qv2: QueryVersion = {
+      id: 'qv-demo-v2',
+      book_id: bookId,
+      version_number: 2,
+      raw_user_query: 'In adults with type 2 diabetes, do SGLT2 inhibitors or GLP-1 receptor agonists reduce 3-point MACE?',
+      boolean_query: '("Type 2 Diabetes"[Title/Abstract]) AND ("SGLT2 inhibitor"[Title/Abstract] OR "GLP-1 RA"[Title/Abstract]) AND ("MACE"[Title/Abstract] OR "Mortality"[Title/Abstract])',
+      date_start: '2015',
+      date_end: '2026',
+      total_hits: 8,
+      created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
+    };
+
+    // Update query versions
+    const rawQVs = localStorage.getItem(this.queryVersionsKey);
+    let qvs: QueryVersion[] = rawQVs ? JSON.parse(rawQVs) : [];
+    qvs = qvs.filter((q) => q.book_id !== bookId).concat([qv2, qv1]);
+    localStorage.setItem(this.queryVersionsKey, JSON.stringify(qvs));
+
+    // Seed 8 Canonical Records with intentional duplicates
+    const records: CanonicalRecord[] = [
+      {
+        id: 'rec-demo-empa-reg',
+        book_id: bookId,
+        cluster_id: 'cluster-empa',
+        title: 'Empagliflozin, Cardiovascular Outcomes, and Mortality in Type 2 Diabetes (EMPA-REG OUTCOME)',
+        abstract: 'BACKGROUND: The effects of empagliflozin, an SGLT2 inhibitor, in patients with type 2 diabetes at high cardiovascular risk are evaluated. Over median 3.1 years, empagliflozin significantly reduced 3-point MACE and all-cause mortality.',
+        authors: ['Zinman B', 'Wanner C', 'Lachin JM', 'Fitchett D'],
+        journal: 'The New England Journal of Medicine',
+        pub_year: 2015,
+        doi: '10.1056/NEJMoa1504720',
+        pmid: '26378288',
+        source_db: 'pubmed',
+        raw_metadata: { trial: 'EMPA-REG' },
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'rec-demo-empa-dup',
+        book_id: bookId,
+        cluster_id: 'cluster-empa',
+        title: 'Empagliflozin, Cardiovascular Outcomes, and Mortality in Type 2 Diabetes.',
+        abstract: 'Cardiovascular outcomes trial with empagliflozin in patients with type 2 diabetes and established cardiovascular disease.',
+        authors: ['Zinman B', 'Wanner C'],
+        journal: 'N Engl J Med',
+        pub_year: 2015,
+        doi: '10.1056/nejmoa1504720',
+        pmid: '26378288',
+        source_db: 'europe_pmc',
+        raw_metadata: { duplicateOf: 'rec-demo-empa-reg' },
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'rec-demo-sustain-6',
+        book_id: bookId,
+        cluster_id: 'cluster-sustain',
+        title: 'Semaglutide and Cardiovascular Outcomes in Patients with Type 2 Diabetes (SUSTAIN-6)',
+        abstract: 'Patients with type 2 diabetes were randomly assigned to once-weekly semaglutide or placebo. The rate of first occurrence of death from cardiovascular causes, nonfatal MI, or nonfatal stroke was significantly lower with semaglutide.',
+        authors: ['Marso SP', 'Bain SC', 'Consoli A', 'Eliaschewitz FG'],
+        journal: 'The New England Journal of Medicine',
+        pub_year: 2016,
+        doi: '10.1056/NEJMoa1607141',
+        pmid: '27633186',
+        source_db: 'pubmed',
+        raw_metadata: { trial: 'SUSTAIN-6' },
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'rec-demo-sustain-dup',
+        book_id: bookId,
+        cluster_id: 'cluster-sustain',
+        title: 'Semaglutide and Cardiovascular Outcomes in Patients with Type 2 Diabetes.',
+        abstract: 'Clinical trial evaluating cardiovascular endpoints with once-weekly subcutaneous semaglutide.',
+        authors: ['Marso SP', 'Bain SC'],
+        journal: 'New England Journal of Medicine',
+        pub_year: 2016,
+        doi: '10.1056/nejmoa1607141',
+        pmid: '27633186',
+        source_db: 'europe_pmc',
+        raw_metadata: { duplicateOf: 'rec-demo-sustain-6' },
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'rec-demo-ukpds-34',
+        book_id: bookId,
+        cluster_id: 'cluster-ukpds',
+        title: 'Effect of intensive blood-glucose control with metformin on complications in overweight patients with type 2 diabetes (UKPDS 34)',
+        abstract: 'Over 10 years, in overweight patients assigned intensive control with metformin compared with conventional therapy, metformin showed a 32% reduction for any diabetes-related endpoint and 36% for all-cause mortality.',
+        authors: ['UKPDS Group', 'Turner RC', 'Holman RR'],
+        journal: 'The Lancet',
+        pub_year: 1998,
+        doi: '10.1016/S0140-6736(98)07019-6',
+        pmid: '9742977',
+        source_db: 'pubmed',
+        raw_metadata: { trial: 'UKPDS 34' },
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'rec-demo-dpp',
+        book_id: bookId,
+        cluster_id: 'cluster-dpp',
+        title: 'Reduction in the incidence of type 2 diabetes with lifestyle intervention or metformin (Diabetes Prevention Program)',
+        abstract: 'Randomized trial of 3234 nondiabetic persons with elevated fasting glucose. Lifestyle intervention reduced diabetes incidence by 58% and metformin by 31% compared with placebo.',
+        authors: ['Knowler WC', 'Barrett-Connor E', 'Fowler SE'],
+        journal: 'The New England Journal of Medicine',
+        pub_year: 2002,
+        doi: '10.1056/NEJMoa012512',
+        pmid: '11856794',
+        source_db: 'pubmed',
+        raw_metadata: { trial: 'DPP' },
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'rec-demo-deliver',
+        book_id: bookId,
+        cluster_id: 'cluster-deliver',
+        title: 'Dapagliflozin in Heart Failure with Mildly Reduced or Preserved Ejection Fraction (DELIVER Trial)',
+        abstract: '6263 patients with HF and LVEF > 40% received dapagliflozin 10 mg or placebo. Dapagliflozin reduced worsening HF and cardiovascular death across diabetic and nondiabetic subgroups.',
+        authors: ['Solomon SD', 'McMurray JJV', 'Claggett B'],
+        journal: 'The New England Journal of Medicine',
+        pub_year: 2022,
+        doi: '10.1056/NEJMoa2206286',
+        pmid: '36027564',
+        source_db: 'pubmed',
+        raw_metadata: { trial: 'DELIVER' },
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'rec-demo-leader',
+        book_id: bookId,
+        cluster_id: 'cluster-leader',
+        title: 'Liraglutide and Cardiovascular Outcomes in Type 2 Diabetes (LEADER Trial)',
+        abstract: 'Patients with type 2 diabetes at high risk for cardiovascular disease had significantly lower rates of cardiovascular death and 3-point MACE with liraglutide than with placebo.',
+        authors: ['Marso SP', 'Daniels GH', 'Brown-Frandsen K'],
+        journal: 'The New England Journal of Medicine',
+        pub_year: 2016,
+        doi: '10.1056/NEJMoa1603827',
+        pmid: '27295427',
+        source_db: 'pubmed',
+        raw_metadata: { trial: 'LEADER' },
+        created_at: new Date().toISOString(),
+      },
+    ];
+
+    this.saveRecords(bookId, records, 'qv-demo-v2');
+
+    // Seed Decisions (Include, Exclude with reasons, Maybe, and Duplicates)
+    const decisions: ScreeningDecision[] = [
+      {
+        id: 'dec-empa',
+        book_id: bookId,
+        record_id: 'rec-demo-empa-reg',
+        cluster_id: 'cluster-empa',
+        status: 'include',
+        exclusion_reason: null,
+        is_duplicate: false,
+        duplicate_of_record_id: null,
+        pico_tags: { p: ['type 2 diabetes'], i: ['empagliflozin'], c: ['placebo'], o: ['MACE', 'mortality'] },
+        decision_type: 'human_confirmed',
+        notes: 'Pivotal SGLT2 cardiovascular outcomes trial meeting all inclusion criteria.',
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'dec-empa-dup',
+        book_id: bookId,
+        record_id: 'rec-demo-empa-dup',
+        cluster_id: 'cluster-empa',
+        status: 'unscreened',
+        exclusion_reason: null,
+        is_duplicate: true,
+        duplicate_of_record_id: 'rec-demo-empa-reg',
+        pico_tags: { p: [], i: [], c: [], o: [] },
+        decision_type: 'machine_suggested',
+        notes: 'Auto-clustered via Tier 1 normalized DOI match (10.1056/nejmoa1504720).',
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'dec-sustain',
+        book_id: bookId,
+        record_id: 'rec-demo-sustain-6',
+        cluster_id: 'cluster-sustain',
+        status: 'include',
+        exclusion_reason: null,
+        is_duplicate: false,
+        duplicate_of_record_id: null,
+        pico_tags: { p: ['type 2 diabetes'], i: ['semaglutide'], c: ['placebo'], o: ['MACE'] },
+        decision_type: 'human_confirmed',
+        notes: 'Landmark GLP-1 RA trial demonstrating statistically significant 26% MACE risk reduction.',
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'dec-sustain-dup',
+        book_id: bookId,
+        record_id: 'rec-demo-sustain-dup',
+        cluster_id: 'cluster-sustain',
+        status: 'unscreened',
+        exclusion_reason: null,
+        is_duplicate: true,
+        duplicate_of_record_id: 'rec-demo-sustain-6',
+        pico_tags: { p: [], i: [], c: [], o: [] },
+        decision_type: 'machine_suggested',
+        notes: 'Auto-clustered via Tier 1 DOI match.',
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'dec-ukpds',
+        book_id: bookId,
+        record_id: 'rec-demo-ukpds-34',
+        cluster_id: 'cluster-ukpds',
+        status: 'include',
+        exclusion_reason: null,
+        is_duplicate: false,
+        duplicate_of_record_id: null,
+        pico_tags: { p: ['overweight type 2 diabetes'], i: ['metformin'], c: ['conventional diet'], o: ['complications', 'mortality'] },
+        decision_type: 'human_confirmed',
+        notes: 'Landmark historical trial establishing metformin as frontline glycemic therapy.',
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'dec-dpp',
+        book_id: bookId,
+        record_id: 'rec-demo-dpp',
+        cluster_id: 'cluster-dpp',
+        status: 'exclude',
+        exclusion_reason: 'Population: Evaluated pre-diabetic impaired glucose tolerance cohorts, not established T2D with primary cardiorenal endpoints.',
+        is_duplicate: false,
+        duplicate_of_record_id: null,
+        pico_tags: { p: ['pre-diabetes'], i: ['metformin'], c: ['placebo'], o: ['incidence'] },
+        decision_type: 'human_confirmed',
+        notes: 'Excluded on protocol Population criteria (impaired glucose tolerance vs confirmed diabetes).',
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'dec-deliver',
+        book_id: bookId,
+        record_id: 'rec-demo-deliver',
+        cluster_id: 'cluster-deliver',
+        status: 'maybe',
+        exclusion_reason: null,
+        is_duplicate: false,
+        duplicate_of_record_id: null,
+        pico_tags: { p: ['heart failure LVEF > 40%'], i: ['dapagliflozin'], c: ['placebo'], o: ['cardiovascular death'] },
+        decision_type: 'human_confirmed',
+        notes: 'Includes both diabetic and non-diabetic HFpEF cohorts. Requires full-text review for stratified subgroup analysis.',
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'dec-leader',
+        book_id: bookId,
+        record_id: 'rec-demo-leader',
+        cluster_id: 'cluster-leader',
+        status: 'include',
+        exclusion_reason: null,
+        is_duplicate: false,
+        duplicate_of_record_id: null,
+        pico_tags: { p: ['type 2 diabetes'], i: ['liraglutide'], c: ['placebo'], o: ['MACE', 'CV death'] },
+        decision_type: 'human_confirmed',
+        notes: 'Meets all PICO inclusion criteria for GLP-1 RA arm.',
+        updated_at: new Date().toISOString(),
+      },
+    ];
+
+    this.saveDecisions(bookId, decisions);
+
+    // Seed Audit Logs
+    this.addAuditLog({
+      book_id: bookId,
+      record_id: 'rec-demo-empa-reg',
+      action: 'Initial screening decision recorded: INCLUDE (PICO criteria validated)',
+      old_value: null,
+      new_value: { status: 'include' },
+    });
+    this.addAuditLog({
+      book_id: bookId,
+      record_id: 'rec-demo-dpp',
+      action: 'Screening decision: EXCLUDE (Population: Pre-diabetes cohort)',
+      old_value: null,
+      new_value: { status: 'exclude', reason: 'Population mismatch' },
+    });
+
+    return demoBook;
+  }
 }
 
 export const localStore = new LocalStorageStore();

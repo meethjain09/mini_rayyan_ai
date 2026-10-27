@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { ResearchBook, Profile, PicoConfig, QueryVersion } from '../../types/database';
 import { ThemeMode } from '../../types/theme';
+import { isSupabaseConfigured } from '../../lib/supabase';
 import { ThemeSwitcher } from '../ui/ThemeSwitcher';
 import { ClinicalQueryInterface } from '../query/ClinicalQueryInterface';
 import { FetchAndDeduplicateView } from '../fetch/FetchAndDeduplicateView';
@@ -42,6 +43,7 @@ interface ResearchBooksDashboardProps {
   currentTheme: ThemeMode;
   onThemeChange: (theme: ThemeMode) => void;
   onSwitchToSimpleMode?: () => void;
+  onSeedDemo?: () => void;
   initialTab?: 'books' | 'query' | 'fetch' | 'screening' | 'loop' | 'guide';
 }
 
@@ -56,6 +58,7 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
   currentTheme,
   onThemeChange,
   onSwitchToSimpleMode,
+  onSeedDemo,
   initialTab,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -258,6 +261,33 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
 
           {/* Right: Actions, Theme Switcher & Logout (Spacious and never overflowed) */}
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            {/* Hackathon Dual-Engine Database Status Indicator */}
+            <div 
+              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border"
+              style={{
+                backgroundColor: isSupabaseConfigured ? 'rgba(56, 189, 248, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                borderColor: isSupabaseConfigured ? 'rgba(56, 189, 248, 0.3)' : 'rgba(16, 185, 129, 0.3)',
+                color: isSupabaseConfigured ? '#38bdf8' : '#10b981',
+              }}
+              title={isSupabaseConfigured ? 'Connected to remote Supabase PostgreSQL database' : 'Running on high-performance Localhost Database (100% Offline Ready)'}
+            >
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: isSupabaseConfigured ? '#38bdf8' : '#10b981' }} />
+              <span>{isSupabaseConfigured ? 'Cloud: Supabase' : 'Local DB: Offline'}</span>
+            </div>
+
+            {/* Quick Demo Dataset Seeder */}
+            {onSeedDemo && (
+              <button
+                type="button"
+                onClick={onSeedDemo}
+                className="hidden md:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-mono border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 transition-all cursor-pointer whitespace-nowrap shrink-0"
+                title="Seed benchmark systematic review data (T2D protocol, v1/v2 queries, deduplicated studies, decisions & PRISMA)"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Seed Demo</span>
+              </button>
+            )}
+
             {/* Create New Protocol Button */}
             <button
               onClick={() => setIsCreateModalOpen(true)}
@@ -383,7 +413,17 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
             <p className="text-xs max-w-sm mx-auto mt-1 font-sans" style={{ color: 'var(--text-muted)' }}>
               Please create a research book protocol first to formulate PICO queries, fetch literature, and screen studies.
             </p>
-            <div className="mt-6 flex items-center justify-center gap-3">
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              {onSeedDemo && (
+                <button
+                  onClick={onSeedDemo}
+                  className="px-4 py-2 text-xs flex items-center gap-2 cursor-pointer rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-semibold transition-all shadow-md"
+                  title="Load full benchmark clinical trial data for instant hackathon demonstration"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Seed Hackathon Demo Dataset</span>
+                </button>
+              )}
               <button
                 onClick={() => setIsCreateModalOpen(true)}
                 className="theme-primary-btn px-4 py-2 text-xs flex items-center gap-2 cursor-pointer"
@@ -681,7 +721,18 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
                 : 'No review projects matched your search query. Clear search or create a new book.'}
             </p>
             {books.length === 0 && (
-              <div className="mt-6 flex items-center justify-center gap-3">
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                {onSeedDemo && (
+                  <button
+                    type="button"
+                    onClick={onSeedDemo}
+                    className="px-4 py-2 text-xs flex items-center gap-2 cursor-pointer rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-semibold transition-all shadow-md"
+                    title="Load complete hackathon demo data (T2D protocol, v1/v2 queries, deduplicated studies, decisions & PRISMA)"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>Seed Hackathon Demo Dataset</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(true)}
