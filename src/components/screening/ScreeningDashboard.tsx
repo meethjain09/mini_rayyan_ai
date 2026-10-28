@@ -55,6 +55,7 @@ import { ThemeMode } from '../../types/theme';
 import { InlinePicoAbstract } from './InlinePicoAbstract';
 import { PrismaReportModal } from './PrismaReportModal';
 import { AiEvidenceConclusionModal } from './AiEvidenceConclusionModal';
+import { sortRecordsBySourcePriority, hasSubstantialAbstract } from '../../utils/recordSorting';
 
 interface ScreeningDashboardProps {
   book: ResearchBook;
@@ -180,9 +181,9 @@ export const ScreeningDashboard: React.FC<ScreeningDashboardProps> = ({
     };
   }, [records, decisionMap]);
 
-  // Filtered Records List
+  // Filtered & Sorted Records List (PubMed & Europe PMC articles given top priority)
   const filteredRecords = useMemo(() => {
-    return records.filter((rec) => {
+    const matched = records.filter((rec) => {
       const dec = decisionMap.get(rec.id);
       const isDup = !!dec?.is_duplicate;
 
@@ -225,6 +226,8 @@ export const ScreeningDashboard: React.FC<ScreeningDashboardProps> = ({
 
       return true;
     });
+
+    return sortRecordsBySourcePriority(matched);
   }, [records, decisionMap, statusFilter, sourceDbFilter, heuristicFilter, searchFilter, heuristicsMap]);
 
   // Active Record
@@ -735,6 +738,11 @@ export const ScreeningDashboard: React.FC<ScreeningDashboardProps> = ({
                         {heur?.flags?.some((f) => f.type === 'rct') && (
                           <span className="px-1 py-0.2 rounded text-[9px] font-mono bg-emerald-500/10 text-emerald-400">
                             ✓ RCT
+                          </span>
+                        )}
+                        {hasSubstantialAbstract(rec) && (
+                          <span className="px-1 py-0.2 rounded text-[9px] font-mono bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                            ABSTRACT READY
                           </span>
                         )}
                       </div>

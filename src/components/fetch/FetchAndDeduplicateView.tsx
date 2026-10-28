@@ -31,6 +31,7 @@ import { ResearchBook, QueryVersion, CanonicalRecord, ScreeningDecision, Literat
 import { fetchLiteratureRecords, LITERATURE_SOURCES_CONFIG, LiteratureFetchResponse } from '../../lib/literatureApi';
 import { runDeduplicationPipeline, DeduplicationResult, normalizeDoi } from '../../lib/deduplication';
 import { localStore } from '../../lib/supabase';
+import { sortRecordsBySourcePriority } from '../../utils/recordSorting';
 
 interface FetchAndDeduplicateViewProps {
   activeBook: ResearchBook;
@@ -188,10 +189,13 @@ export const FetchAndDeduplicateView: React.FC<FetchAndDeduplicateViewProps> = (
     setSelectedRecordForMerge(null);
   };
 
-  const uniqueRecords = records.filter((r) => {
+  const rawUniqueRecords = records.filter((r) => {
     const dec = decisions.find((d) => d.record_id === r.id);
     return !dec?.is_duplicate;
   });
+
+  // PubMed and Europe PMC articles prioritized at the top
+  const uniqueRecords = sortRecordsBySourcePriority(rawUniqueRecords);
 
   const duplicateRecords = records.filter((r) => {
     const dec = decisions.find((d) => d.record_id === r.id);

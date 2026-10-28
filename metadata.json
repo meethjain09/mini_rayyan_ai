@@ -1,5 +1,5 @@
 {
-  "name": "Remix Mini-Rayyan Medical Screening Platform",
+  "name": "Mini Rayyan AI",
   "description": "AI-assisted systematic review screening platform designed for medical researchers to replicate the core workflows of Rayyan.ai.",
   "requestFramePermissions": [],
   "majorCapabilities": [

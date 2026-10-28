@@ -38,6 +38,7 @@ import { CanonicalRecord, ScreeningDecision, ScreeningStatus, PicoConfig, Profil
 import { ThemeMode } from '../../types/theme';
 import { InlinePicoAbstract } from '../screening/InlinePicoAbstract';
 import { AiEvidenceConclusionModal } from '../screening/AiEvidenceConclusionModal';
+import { sortRecordsBySourcePriority, hasSubstantialAbstract } from '../../utils/recordSorting';
 
 interface SimplePicoFlowProps {
   onOpenAdvancedMode?: () => void;
@@ -289,7 +290,7 @@ export const SimplePicoFlow: React.FC<SimplePicoFlowProps> = ({
     return dec?.is_duplicate;
   });
 
-  const filteredRecords = records.filter((r) => {
+  const rawFilteredRecords = records.filter((r) => {
     const dec = decisions.find((d) => d.record_id === r.id);
     if (activeFilter === 'duplicates') {
       return dec?.is_duplicate;
@@ -301,6 +302,9 @@ export const SimplePicoFlow: React.FC<SimplePicoFlowProps> = ({
     if (activeFilter === 'unscreened') return dec?.status === 'unscreened';
     return dec?.status === activeFilter;
   });
+
+  // PubMed & Europe PMC articles appear first during screening
+  const filteredRecords = sortRecordsBySourcePriority(rawFilteredRecords);
 
   const countIncluded = decisions.filter((d) => d.status === 'include').length;
   const countExcluded = decisions.filter((d) => d.status === 'exclude').length;
@@ -763,6 +767,11 @@ export const SimplePicoFlow: React.FC<SimplePicoFlowProps> = ({
                           {record.doi && (
                             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400">
                               DOI: {record.doi}
+                            </span>
+                          )}
+                          {hasSubstantialAbstract(record) && (
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
+                              Full Abstract
                             </span>
                           )}
                           {isDuplicate && (
