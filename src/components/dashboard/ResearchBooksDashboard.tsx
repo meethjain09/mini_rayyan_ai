@@ -59,7 +59,6 @@ interface ResearchBooksDashboardProps {
   onSwitchToSimpleMode?: () => void;
   onSeedDemo?: () => void;
   initialTab?: 'books' | 'query' | 'fetch' | 'screening' | 'loop' | 'guide';
-  onOpenSupabaseConfig?: () => void;
 }
 
 export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
@@ -75,7 +74,6 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
   onSwitchToSimpleMode,
   onSeedDemo,
   initialTab,
-  onOpenSupabaseConfig,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -331,21 +329,6 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
 
           {/* Right: Actions, Theme Switcher & Logout (Spacious and never overflowed) */}
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-            {/* Supabase Database Status / Config Button */}
-            <button
-              type="button"
-              onClick={onOpenSupabaseConfig}
-              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border cursor-pointer hover:brightness-110 transition-all"
-              style={{
-                backgroundColor: isSupabaseConfigured ? 'rgba(56, 189, 248, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                borderColor: isSupabaseConfigured ? 'rgba(56, 189, 248, 0.3)' : 'rgba(245, 158, 11, 0.3)',
-                color: isSupabaseConfigured ? '#38bdf8' : '#f59e0b',
-              }}
-              title={isSupabaseConfigured ? 'Connected to remote Supabase PostgreSQL database. Click to view configuration.' : 'Supabase database is not connected. Click to enter Supabase URL & Key.'}
-            >
-              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: isSupabaseConfigured ? '#38bdf8' : '#f59e0b' }} />
-              <span>{isSupabaseConfigured ? 'Database: Supabase' : 'Connect Supabase'}</span>
-            </button>
 
             {/* Quick Demo Dataset Seeder */}
             {onSeedDemo && (

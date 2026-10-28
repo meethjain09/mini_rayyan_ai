@@ -8,7 +8,6 @@ import { AuthModal } from './components/auth/AuthModal';
 import { ResearchBooksDashboard } from './components/dashboard/ResearchBooksDashboard';
 import { SimplePicoFlow } from './components/simple/SimplePicoFlow';
 import { PlatformGuideView } from './components/guide/PlatformGuideView';
-import { SupabaseConfigModal } from './components/common/SupabaseConfigModal';
 import { ThemeSwitcher } from './components/ui/ThemeSwitcher';
 import { localStore, supabase, isSupabaseConfigured, supabaseUrl, supabaseAnonKey } from './lib/supabase';
 import { Profile, ResearchBook, PicoConfig, CanonicalRecord, LiteratureSource } from './types/database';
@@ -33,7 +32,6 @@ export default function App() {
   const [viewMode, setViewMode] = useState<'simple' | 'advanced' | 'guide'>('simple');
   const [advancedInitialTab, setAdvancedInitialTab] = useState<'books' | 'query' | 'fetch' | 'screening' | 'loop' | 'guide'>('books');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [isSupabaseConfigOpen, setIsSupabaseConfigOpen] = useState(false);
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof window !== 'undefined') {
       return (localStorage.getItem('mini_rayyan_theme') as ThemeMode) || 'emerald-sage';
@@ -258,21 +256,6 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-2.5">
-              {/* Database Status Button: Opens Supabase Config Modal */}
-              <button
-                type="button"
-                onClick={() => setIsSupabaseConfigOpen(true)}
-                className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono border cursor-pointer hover:brightness-110 transition-all"
-                style={{
-                  backgroundColor: isSupabaseConfigured ? 'rgba(56, 189, 248, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                  borderColor: isSupabaseConfigured ? 'rgba(56, 189, 248, 0.3)' : 'rgba(245, 158, 11, 0.3)',
-                  color: isSupabaseConfigured ? '#38bdf8' : '#f59e0b',
-                }}
-                title={isSupabaseConfigured ? 'Connected to Supabase PostgreSQL database. Click to view settings.' : 'Click to connect your Supabase database.'}
-              >
-                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: isSupabaseConfigured ? '#38bdf8' : '#f59e0b' }} />
-                <span>{isSupabaseConfigured ? 'Database: Supabase' : 'Connect Supabase'}</span>
-              </button>
 
               {/* Instant Hackathon Demo Dataset Seeder */}
               <button
@@ -402,22 +385,6 @@ export default function App() {
                 <span className="hidden sm:inline">Advanced Mode</span>
               </button>
 
-              {/* Supabase Database Status Button */}
-              <button
-                type="button"
-                onClick={() => setIsSupabaseConfigOpen(true)}
-                className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono border cursor-pointer hover:brightness-110 transition-all"
-                style={{
-                  backgroundColor: isSupabaseConfigured ? 'rgba(56, 189, 248, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                  borderColor: isSupabaseConfigured ? 'rgba(56, 189, 248, 0.3)' : 'rgba(245, 158, 11, 0.3)',
-                  color: isSupabaseConfigured ? '#38bdf8' : '#f59e0b',
-                }}
-                title={isSupabaseConfigured ? 'Connected to Supabase PostgreSQL database. Click to view settings.' : 'Click to connect your Supabase database.'}
-              >
-                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: isSupabaseConfigured ? '#38bdf8' : '#f59e0b' }} />
-                <span>{isSupabaseConfigured ? 'Database: Supabase' : 'Connect Supabase'}</span>
-              </button>
-
               {/* Theme Switcher */}
               <ThemeSwitcher currentTheme={theme} onThemeChange={setTheme} />
 
@@ -499,23 +466,9 @@ export default function App() {
               onSwitchToSimpleMode={() => setViewMode('simple')}
               initialTab={advancedInitialTab}
               onSeedDemo={handleSeedDemo}
-              onOpenSupabaseConfig={() => setIsSupabaseConfigOpen(true)}
             />
           )}
         </main>
-
-        {/* Supabase Configuration & Connection Modal */}
-        <SupabaseConfigModal
-          isOpen={isSupabaseConfigOpen}
-          onClose={() => setIsSupabaseConfigOpen(false)}
-          currentUrl={supabaseUrl}
-          currentKey={supabaseAnonKey}
-          isConfigured={isSupabaseConfigured}
-          onSaved={() => {
-            showToast('Supabase settings updated. Connecting...');
-            window.location.reload();
-          }}
-        />
 
         {/* Authentication Modal */}
         <AuthModal
