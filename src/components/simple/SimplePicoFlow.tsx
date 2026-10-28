@@ -30,18 +30,21 @@ import {
   LogIn,
 } from 'lucide-react';
 import { extractPicoFromClinicalQuery, ExtractedPicoResult } from '../../lib/picoParser';
-import { fetchLiteratureRecords } from '../../lib/literatureApi';
+import { fetchLiteratureRecords, LITERATURE_SOURCES_CONFIG } from '../../lib/literatureApi';
 import { runDeduplicationPipeline } from '../../lib/deduplication';
 import { evaluateRecordScreening } from '../../lib/screeningRules';
 import { localStore } from '../../lib/supabase';
-import { CanonicalRecord, ScreeningDecision, ScreeningStatus, PicoConfig, Profile } from '../../types/database';
+import { CanonicalRecord, ScreeningDecision, ScreeningStatus, PicoConfig, Profile, LiteratureSource } from '../../types/database';
+import { ThemeMode } from '../../types/theme';
 import { InlinePicoAbstract } from '../screening/InlinePicoAbstract';
+import { AiEvidenceConclusionModal } from '../screening/AiEvidenceConclusionModal';
 
 interface SimplePicoFlowProps {
   onOpenAdvancedMode?: () => void;
   user?: Profile | null;
   onOpenAuthModal?: () => void;
   onOpenGuide?: () => void;
+  currentTheme?: ThemeMode;
 }
 
 const SAMPLE_QUERIES = [
@@ -68,6 +71,7 @@ export const SimplePicoFlow: React.FC<SimplePicoFlowProps> = ({
   user,
   onOpenAuthModal,
   onOpenGuide,
+  currentTheme,
 }) => {
   // Query Input State
   const [queryText, setQueryText] = useState('');
@@ -92,6 +96,7 @@ export const SimplePicoFlow: React.FC<SimplePicoFlowProps> = ({
   const [excludeReasonInput, setExcludeReasonInput] = useState<{ [recordId: string]: string }>({});
   const [notesInput, setNotesInput] = useState<{ [recordId: string]: string }>({});
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isConclusionModalOpen, setIsConclusionModalOpen] = useState(false);
 
   // Automatically check and extract PICO when the query changes or mounts
   useEffect(() => {
@@ -132,12 +137,17 @@ export const SimplePicoFlow: React.FC<SimplePicoFlowProps> = ({
       const newBook = localStore.createBook(bookTitle, queryText, picoConfig, user?.id);
       localStore.setActiveBookId(newBook.id);
 
-      // 2. Fetch literature from live APIs (with benchmark fallback)
+      // 2. Fetch literature from live APIs (OpenAlex, Crossref, Semantic Scholar, PubMed, Europe PMC, arXiv, DOAJ)
       const fetchResult = await fetchLiteratureRecords({
         bookId: newBook.id,
         query: queryText,
+        sourceOpenAlex: true,
+        sourceCrossref: true,
+        sourceSemanticScholar: true,
         sourcePubMed: true,
         sourceEuropePmc: true,
+        sourceArxiv: true,
+        sourceDoaj: true,
       });
 
       setStatusMessage(`Found ${fetchResult.records.length} records. Running automated deduplication...`);
@@ -240,6 +250,32 @@ export const SimplePicoFlow: React.FC<SimplePicoFlowProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Open Conclusion with AI: if 0 papers manually marked include, auto-include candidates so synthesis runs immediately
+  const handleOpenConclusionModal = () => {
+    const includedDecisions = decisions.filter((d) => d.status === 'include');
+    if (includedDecisions.length === 0) {
+      const candidateRecords = records
+        .filter((r) => {
+          const dec = decisions.find((d) => d.record_id === r.id);
+          return dec?.status !== 'exclude' && !dec?.is_duplicate;
+        })
+        .slice(0, 6);
+
+      if (candidateRecords.length > 0) {
+        const candidateIds = new Set(candidateRecords.map((r) => r.id));
+        setDecisions((prev) => {
+          const next = prev.map((d) =>
+            candidateIds.has(d.record_id) ? { ...d, status: 'include' as const } : d
+          );
+          const activeBookId = localStore.getActiveBookId();
+          if (activeBookId) localStore.saveDecisions(activeBookId, next);
+          return next;
+        });
+      }
+    }
+    setIsConclusionModalOpen(true);
   };
 
   // Filtered view records
@@ -603,6 +639,16 @@ export const SimplePicoFlow: React.FC<SimplePicoFlowProps> = ({
                 <Download className="w-3.5 h-3.5" />
                 <span>Export CSV ({countIncluded})</span>
               </button>
+
+              <button
+                type="button"
+                onClick={handleOpenConclusionModal}
+                className="px-4 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:brightness-110 text-white shadow-md shadow-emerald-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Synthesize an evidence-based clinical conclusion answering your question from included papers"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
+                <span>Conclude with AI ({countIncluded})</span>
+              </button>
             </div>
           </div>
 
@@ -699,8 +745,10 @@ export const SimplePicoFlow: React.FC<SimplePicoFlowProps> = ({
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                       <div className="space-y-1 max-w-3xl">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full uppercase bg-[var(--bg-elevated)] border border-[var(--border-subtle)]">
-                            {record.source_db === 'pubmed' ? 'PubMed E-utilities' : 'Europe PMC'}
+                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full uppercase border font-bold ${
+                            LITERATURE_SOURCES_CONFIG[record.source_db as LiteratureSource]?.badgeClass || 'bg-[var(--bg-elevated)] border-[var(--border-subtle)]'
+                          }`}>
+                            {LITERATURE_SOURCES_CONFIG[record.source_db as LiteratureSource]?.shortName || record.source_db.toUpperCase()}
                           </span>
                           {record.pub_year && (
                             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border-subtle)]">
@@ -857,6 +905,48 @@ export const SimplePicoFlow: React.FC<SimplePicoFlowProps> = ({
           )}
         </div>
       )}
+
+      {/* AI Evidence Synthesis & Clinical Conclusion Modal */}
+      <AiEvidenceConclusionModal
+        isOpen={isConclusionModalOpen}
+        onClose={() => setIsConclusionModalOpen(false)}
+        query={queryText || 'Clinical Evidence Question'}
+        pico={{
+          p: editedP || extractedPico?.p || '',
+          i: editedI || extractedPico?.i || '',
+          c: editedC || extractedPico?.c || '',
+          o: editedO || extractedPico?.o || '',
+        }}
+        bookTitle={queryText}
+        includedRecords={records.filter((r) => {
+          const dec = decisions.find((d) => d.record_id === r.id);
+          return dec?.status === 'include';
+        })}
+        candidateRecords={records.filter((r) => {
+          const dec = decisions.find((d) => d.record_id === r.id);
+          return dec?.status !== 'exclude' && !dec?.is_duplicate;
+        })}
+        onIncludeAllCandidates={() => {
+          const candidateIds = new Set(
+            records
+              .filter((r) => {
+                const dec = decisions.find((d) => d.record_id === r.id);
+                return dec?.status !== 'exclude' && !dec?.is_duplicate;
+              })
+              .slice(0, 6)
+              .map((r) => r.id)
+          );
+          setDecisions((prev) => {
+            const next = prev.map((d) =>
+              candidateIds.has(d.record_id) ? { ...d, status: 'include' as const } : d
+            );
+            const activeBookId = localStore.getActiveBookId();
+            if (activeBookId) localStore.saveDecisions(activeBookId, next);
+            return next;
+          });
+        }}
+        currentTheme={currentTheme}
+      />
     </div>
   );
 };

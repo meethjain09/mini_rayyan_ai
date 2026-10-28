@@ -42,24 +42,30 @@ import {
   ScreeningStatus,
   PicoTags,
   AuditLog,
+  LiteratureSource,
 } from '../../types/database';
+import { LITERATURE_SOURCES_CONFIG } from '../../lib/literatureApi';
 import { localStore } from '../../lib/supabase';
 import {
   evaluateRecordScreening,
   STANDARD_EXCLUSION_REASONS,
   HeuristicRuleFlag,
 } from '../../lib/screeningRules';
+import { ThemeMode } from '../../types/theme';
 import { InlinePicoAbstract } from './InlinePicoAbstract';
 import { PrismaReportModal } from './PrismaReportModal';
+import { AiEvidenceConclusionModal } from './AiEvidenceConclusionModal';
 
 interface ScreeningDashboardProps {
   book: ResearchBook;
   onBackToFetch?: () => void;
+  currentTheme?: ThemeMode;
 }
 
 export const ScreeningDashboard: React.FC<ScreeningDashboardProps> = ({
   book,
   onBackToFetch,
+  currentTheme,
 }) => {
   // Database State
   const [records, setRecords] = useState<CanonicalRecord[]>([]);
@@ -70,11 +76,12 @@ export const ScreeningDashboard: React.FC<ScreeningDashboardProps> = ({
   // Filters State
   const [statusFilter, setStatusFilter] = useState<'all' | 'include' | 'exclude' | 'maybe' | 'unscreened' | 'duplicates'>('all');
   const [searchFilter, setSearchFilter] = useState('');
-  const [sourceDbFilter, setSourceDbFilter] = useState<'all' | 'pubmed' | 'europe_pmc'>('all');
+  const [sourceDbFilter, setSourceDbFilter] = useState<'all' | LiteratureSource>('all');
   const [heuristicFilter, setHeuristicFilter] = useState<'all' | 'flag_animal' | 'flag_language' | 'flag_review' | 'flag_rct'>('all');
 
   // UI Modal State
   const [isPrismaModalOpen, setIsPrismaModalOpen] = useState(false);
+  const [isConclusionModalOpen, setIsConclusionModalOpen] = useState(false);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [activeTabReader, setActiveTabReader] = useState<'abstract' | 'audit' | 'raw'>('abstract');
 
@@ -372,6 +379,16 @@ export const ScreeningDashboard: React.FC<ScreeningDashboardProps> = ({
 
           <button
             type="button"
+            onClick={() => setIsConclusionModalOpen(true)}
+            className="theme-primary-btn px-4 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white hover:brightness-110 transition"
+            title="Synthesize an evidence-based conclusion answering your research query from all included papers"
+          >
+            <Sparkles className="w-4 h-4 text-emerald-200" />
+            <span>Conclude with AI ({metrics.included})</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setIsPrismaModalOpen(true)}
             className="theme-primary-btn px-4 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md"
           >
@@ -578,36 +595,22 @@ export const ScreeningDashboard: React.FC<ScreeningDashboardProps> = ({
               <span className="text-[10px] font-mono uppercase tracking-wider block" style={{ color: 'var(--text-muted)' }}>
                 Source Database
               </span>
-
-              <div className="grid grid-cols-3 gap-1">
-                <button
-                  type="button"
-                  onClick={() => setSourceDbFilter('all')}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-mono cursor-pointer transition-all ${
-                    sourceDbFilter === 'all' ? 'theme-primary-btn font-semibold' : 'theme-glass-input opacity-70 hover:opacity-100'
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSourceDbFilter('pubmed')}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-mono cursor-pointer transition-all ${
-                    sourceDbFilter === 'pubmed' ? 'theme-primary-btn font-semibold' : 'theme-glass-input opacity-70 hover:opacity-100'
-                  }`}
-                >
-                  PubMed
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSourceDbFilter('europe_pmc')}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-mono cursor-pointer transition-all ${
-                    sourceDbFilter === 'europe_pmc' ? 'theme-primary-btn font-semibold' : 'theme-glass-input opacity-70 hover:opacity-100'
-                  }`}
-                >
-                  Europe PMC
-                </button>
-              </div>
+              <select
+                value={sourceDbFilter}
+                onChange={(e) => setSourceDbFilter(e.target.value as any)}
+                className="w-full theme-glass-input px-2.5 py-1.5 rounded-xl text-xs outline-none font-mono cursor-pointer"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                <option value="all">All Catalogs ({records.length})</option>
+                <option value="openalex">OpenAlex Graph</option>
+                <option value="crossref">Crossref DOI Registry</option>
+                <option value="semanticscholar">Semantic Scholar</option>
+                <option value="pubmed">PubMed E-utilities</option>
+                <option value="europe_pmc">Europe PMC</option>
+                <option value="arxiv">arXiv Preprints</option>
+                <option value="doaj">DOAJ Open Access</option>
+                <option value="core">CORE Repositories</option>
+              </select>
             </div>
           </div>
         </div>
@@ -736,8 +739,12 @@ export const ScreeningDashboard: React.FC<ScreeningDashboardProps> = ({
                         )}
                       </div>
 
-                      <span className="text-[10px] font-mono uppercase opacity-50 shrink-0" style={{ color: 'var(--text-muted)' }}>
-                        {rec.source_db === 'pubmed' ? 'PubMed' : 'EurPMC'}
+                      <span
+                        className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded border shrink-0 font-bold ${
+                          LITERATURE_SOURCES_CONFIG[rec.source_db]?.badgeClass || 'bg-gray-500/20 text-gray-300'
+                        }`}
+                      >
+                        {LITERATURE_SOURCES_CONFIG[rec.source_db]?.shortName || rec.source_db.toUpperCase()}
                       </span>
                     </div>
 
@@ -770,8 +777,12 @@ export const ScreeningDashboard: React.FC<ScreeningDashboardProps> = ({
               <div className="space-y-2 pb-4 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-md theme-glass-input font-bold" style={{ color: 'var(--accent-primary)' }}>
-                      {activeRecord.source_db === 'pubmed' ? 'NCBI PubMed' : 'Europe PMC'}
+                    <span
+                      className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded-md border font-bold ${
+                        LITERATURE_SOURCES_CONFIG[activeRecord.source_db]?.badgeClass || 'theme-glass-input'
+                      }`}
+                    >
+                      {LITERATURE_SOURCES_CONFIG[activeRecord.source_db]?.name || activeRecord.source_db.toUpperCase()}
                     </span>
                     {activeRecord.pub_year && (
                       <span className="text-[11px] font-mono opacity-70" style={{ color: 'var(--text-secondary)' }}>
@@ -1089,6 +1100,40 @@ export const ScreeningDashboard: React.FC<ScreeningDashboardProps> = ({
         decisions={decisions}
         isOpen={isPrismaModalOpen}
         onClose={() => setIsPrismaModalOpen(false)}
+      />
+
+      {/* AI Evidence Synthesis & Clinical Conclusion Modal */}
+      <AiEvidenceConclusionModal
+        isOpen={isConclusionModalOpen}
+        onClose={() => setIsConclusionModalOpen(false)}
+        query={book.description || book.title || 'What are the clinical findings and conclusions?'}
+        pico={book.pico_config}
+        bookTitle={book.title}
+        includedRecords={records.filter((r) => {
+          const dec = decisions.find((d) => d.record_id === r.id);
+          return dec?.status === 'include';
+        })}
+        candidateRecords={records.filter((r) => {
+          const dec = decisions.find((d) => d.record_id === r.id);
+          return dec?.status !== 'exclude' && !dec?.is_duplicate;
+        })}
+        onIncludeAllCandidates={() => {
+          const candidateIds = new Set(
+            records
+              .filter((r) => {
+                const dec = decisions.find((d) => d.record_id === r.id);
+                return dec?.status !== 'exclude' && !dec?.is_duplicate;
+              })
+              .slice(0, 6)
+              .map((r) => r.id)
+          );
+          const next = decisions.map((d) =>
+            candidateIds.has(d.record_id) ? { ...d, status: 'include' as const } : d
+          );
+          setDecisions(next);
+          localStore.saveDecisions(book.id, next);
+        }}
+        currentTheme={currentTheme}
       />
     </div>
   );

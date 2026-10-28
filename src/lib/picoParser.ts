@@ -16,6 +16,9 @@ export interface ExtractedPicoResult {
     pubmed: string;
     europePmc: string;
     genericBoolean: string;
+    openalex: string;
+    crossref: string;
+    arxiv: string;
   };
 }
 
@@ -185,7 +188,14 @@ export function compileBooleanQueries(
   pico: PicoConfig,
   dateStart?: string,
   dateEnd?: string
-): { pubmed: string; europePmc: string; genericBoolean: string } {
+): {
+  pubmed: string;
+  europePmc: string;
+  genericBoolean: string;
+  openalex: string;
+  crossref: string;
+  arxiv: string;
+} {
   const pTerm = sanitizeSearchTerm(pico.p);
   const iTerm = sanitizeSearchTerm(pico.i);
   const cTerm = sanitizeSearchTerm(pico.c);
@@ -212,7 +222,7 @@ export function compileBooleanQueries(
   // Human studies filter
   pubmed += ` AND ("humans"[MeSH Terms] OR "human"[Title/Abstract])`;
 
-  // Date range filter for PubMed: "YYYY/MM/DD"[Date - Publication] : "YYYY/MM/DD"[Date - Publication]
+  // Date range filter for PubMed
   if (dateStart || dateEnd) {
     const start = dateStart || '1990';
     const end = dateEnd || new Date().getFullYear().toString();
@@ -234,10 +244,22 @@ export function compileBooleanQueries(
     europePmc += ` AND (PUB_YEAR:[${start} TO ${end}])`;
   }
 
+  // OpenAlex Search Query Format
+  const openalex = `default.search:"${pTerm} ${iTerm}"${dateStart || dateEnd ? `,from_publication_date:${dateStart || '1990'}-01-01` : ''}`;
+
+  // Crossref REST Query Format
+  const crossref = `${pTerm} ${iTerm}${cTerm ? ' ' + cTerm : ''}`;
+
+  // arXiv Search Syntax
+  const arxiv = `all:${pTerm.replace(/\s+/g, '+')} AND all:${iTerm.replace(/\s+/g, '+')}`;
+
   return {
     pubmed,
     europePmc,
     genericBoolean,
+    openalex,
+    crossref,
+    arxiv,
   };
 }
 

@@ -49,7 +49,7 @@ export const ClinicalQueryInterface: React.FC<ClinicalQueryInterfaceProps> = ({
   const [editC, setEditC] = useState('');
   const [editO, setEditO] = useState('');
   const [selectedExclusions, setSelectedExclusions] = useState<string[]>([]);
-  const [copiedFormat, setCopiedFormat] = useState<'pubmed' | 'europePmc' | null>(null);
+  const [copiedFormat, setCopiedFormat] = useState<'pubmed' | 'europePmc' | 'openalex' | 'crossref' | 'arxiv' | null>(null);
 
   // Version history
   const [queryVersions, setQueryVersions] = useState<QueryVersion[]>([]);
@@ -103,7 +103,7 @@ export const ClinicalQueryInterface: React.FC<ClinicalQueryInterfaceProps> = ({
     onQueryVersionSaved(savedVersion);
   };
 
-  const copyToClipboard = (text: string, format: 'pubmed' | 'europePmc') => {
+  const copyToClipboard = (text: string, format: 'pubmed' | 'europePmc' | 'openalex' | 'crossref' | 'arxiv') => {
     navigator.clipboard.writeText(text);
     setCopiedFormat(format);
     setTimeout(() => setCopiedFormat(null), 2000);
@@ -130,7 +130,7 @@ export const ClinicalQueryInterface: React.FC<ClinicalQueryInterfaceProps> = ({
             Natural Language Clinical Query
           </h2>
           <p className="mt-2 text-xs sm:text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-            Type your clinical systematic review question in standard plain English. The rule-based NLP engine will extract Population, Intervention, Comparator, and Outcome (PICO) terms and generate Boolean queries for PubMed &amp; Europe PMC.
+            Type your clinical systematic review question in standard plain English. The rule-based NLP engine extracts Population, Intervention, Comparator, and Outcome (PICO) terms and dynamically compiles Boolean and keyword queries optimized for <strong>OpenAlex</strong>, <strong>Crossref</strong>, <strong>Semantic Scholar</strong>, <strong>PubMed</strong>, and <strong>arXiv</strong>.
           </p>
         </div>
       </div>
@@ -459,32 +459,76 @@ export const ClinicalQueryInterface: React.FC<ClinicalQueryInterfaceProps> = ({
                 </div>
               </div>
 
-              {/* Live Compiled Boolean Queries Preview */}
+              {/* Live Compiled Queries Preview */}
               <div className="space-y-3 pt-3 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
                 <div className="text-[11px] font-mono uppercase tracking-wider font-bold" style={{ color: 'var(--text-primary)' }}>
-                  Compiled Boolean Search Strings (Dynamic Live Preview):
+                  Compiled Search Strings Across Catalogs (Dynamic Live Preview):
                 </div>
 
                 {/* PubMed Syntax */}
                 <div className="p-3 rounded-xl theme-glass-input space-y-1">
                   <div className="flex items-center justify-between text-[10px] font-mono" style={{ color: 'var(--accent-primary)' }}>
-                    <span>PUBMED E-UTILITIES SYNTAX</span>
-                    <span>HUMAN RESTRICTED</span>
+                    <span>PUBMED E-UTILITIES (MeSH &amp; Title/Abstract)</span>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(liveCompiledQueries.pubmed, 'pubmed')}
+                      className="cursor-pointer hover:underline flex items-center gap-1"
+                    >
+                      {copiedFormat === 'pubmed' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedFormat === 'pubmed' ? 'Copied' : 'Copy'}</span>
+                    </button>
                   </div>
                   <p className="font-mono text-xs break-all" style={{ color: 'var(--text-secondary)' }}>
                     {liveCompiledQueries.pubmed}
                   </p>
                 </div>
 
+                {/* OpenAlex Search Syntax */}
+                <div className="p-3 rounded-xl theme-glass-input space-y-1">
+                  <div className="flex items-center justify-between text-[10px] font-mono text-amber-300">
+                    <span>OPENALEX SCHOLARLY GRAPH SYNTAX</span>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(liveCompiledQueries.openalex, 'openalex')}
+                      className="cursor-pointer hover:underline flex items-center gap-1"
+                    >
+                      {copiedFormat === 'openalex' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedFormat === 'openalex' ? 'Copied' : 'Copy'}</span>
+                    </button>
+                  </div>
+                  <p className="font-mono text-xs break-all" style={{ color: 'var(--text-secondary)' }}>
+                    {liveCompiledQueries.openalex}
+                  </p>
+                </div>
+
                 {/* Europe PMC Syntax */}
                 <div className="p-3 rounded-xl theme-glass-input space-y-1">
                   <div className="flex items-center justify-between text-[10px] font-mono" style={{ color: 'var(--accent-secondary)' }}>
-                    <span>EUROPE PMC REST API SYNTAX</span>
-                    <span>TITLE_ABS FIELDS</span>
+                    <span>EUROPE PMC REST API (TITLE_ABS)</span>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(liveCompiledQueries.europePmc, 'europePmc')}
+                      className="cursor-pointer hover:underline flex items-center gap-1"
+                    >
+                      {copiedFormat === 'europePmc' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedFormat === 'europePmc' ? 'Copied' : 'Copy'}</span>
+                    </button>
                   </div>
                   <p className="font-mono text-xs break-all" style={{ color: 'var(--text-secondary)' }}>
                     {liveCompiledQueries.europePmc}
                   </p>
+                </div>
+
+                {/* Crossref & arXiv */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-mono">
+                  <div className="p-2.5 rounded-xl theme-glass-input space-y-0.5">
+                    <span className="text-cyan-300 block uppercase font-bold">Crossref Keywords:</span>
+                    <p className="truncate text-slate-300">{liveCompiledQueries.crossref}</p>
+                  </div>
+                  <div className="p-2.5 rounded-xl theme-glass-input space-y-0.5">
+                    <span className="text-rose-300 block uppercase font-bold">arXiv Query:</span>
+                    <p className="truncate text-slate-300">{liveCompiledQueries.arxiv}</p>
+                  </div>
                 </div>
               </div>
 

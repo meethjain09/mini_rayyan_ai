@@ -75,7 +75,8 @@ function calculateCompletenessScore(record: CanonicalRecord): number {
 export function runDeduplicationPipeline(
   incomingRecords: CanonicalRecord[],
   existingRecords: CanonicalRecord[] = [],
-  bookId: string
+  bookId: string,
+  existingDecisions: ScreeningDecision[] = []
 ): DeduplicationResult {
   const combined = [...existingRecords];
   let matchByDoi = 0;
@@ -163,6 +164,10 @@ export function runDeduplicationPipeline(
     combined.push(newRec);
   });
 
+  // Index prior screening decisions so reviewer effort is never erased
+  const existingDecisionMap = new Map<string, ScreeningDecision>();
+  existingDecisions.forEach((d) => existingDecisionMap.set(d.record_id, d));
+
   // Now generate screening decisions & designate representatives
   const decisions: ScreeningDecision[] = [];
   let duplicatesIdentified = 0;
@@ -179,22 +184,36 @@ export function runDeduplicationPipeline(
         duplicatesIdentified++;
       }
 
-      decisions.push({
-        id: 'dec-' + rec.id,
-        book_id: bookId,
-        record_id: rec.id,
-        cluster_id: clusterId,
-        status: isDuplicate ? 'exclude' : 'unscreened',
-        exclusion_reason: isDuplicate ? 'Duplicate record (clustered with representative study)' : null,
-        is_duplicate: isDuplicate,
-        duplicate_of_record_id: isDuplicate ? representative.id : null,
-        pico_tags: { p: [], i: [], c: [], o: [] },
-        decision_type: 'machine_suggested',
-        notes: isDuplicate
-          ? `Automatically clustered with representative ID: ${representative.id.substring(0, 8)}`
-          : null,
-        updated_at: new Date().toISOString(),
-      });
+      const existingDec = existingDecisionMap.get(rec.id);
+      if (existingDec && existingDec.status !== 'unscreened') {
+        // 100% PRESERVE PRIOR SCREENING DECISION ACROSS QUERY LOOPS
+        decisions.push({
+          ...existingDec,
+          cluster_id: clusterId,
+          is_duplicate: isDuplicate,
+          duplicate_of_record_id: isDuplicate ? representative.id : null,
+          updated_at: existingDec.updated_at || new Date().toISOString(),
+        });
+      } else {
+        decisions.push({
+          id: existingDec?.id || ('dec-' + rec.id),
+          book_id: bookId,
+          record_id: rec.id,
+          cluster_id: clusterId,
+          status: isDuplicate ? 'exclude' : (existingDec?.status || 'unscreened'),
+          exclusion_reason: isDuplicate
+            ? 'Duplicate record (clustered with representative study)'
+            : (existingDec?.exclusion_reason || null),
+          is_duplicate: isDuplicate,
+          duplicate_of_record_id: isDuplicate ? representative.id : null,
+          pico_tags: existingDec?.pico_tags || { p: [], i: [], c: [], o: [] },
+          decision_type: isDuplicate ? 'machine_suggested' : (existingDec?.decision_type || 'machine_suggested'),
+          notes: isDuplicate
+            ? `Automatically clustered with representative ID: ${representative.id.substring(0, 8)}`
+            : (existingDec?.notes || null),
+          updated_at: new Date().toISOString(),
+        });
+      }
     });
   });
 

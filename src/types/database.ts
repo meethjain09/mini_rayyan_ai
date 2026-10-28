@@ -27,6 +27,7 @@ export interface ResearchBook {
   title: string;
   description: string | null;
   pico_config: PicoConfig;
+  default_sources?: LiteratureSource[];
   created_at: string;
   updated_at: string;
 }
@@ -43,6 +44,16 @@ export interface QueryVersion {
   created_at: string;
 }
 
+export type LiteratureSource =
+  | 'pubmed'
+  | 'europe_pmc'
+  | 'openalex'
+  | 'crossref'
+  | 'semanticscholar'
+  | 'arxiv'
+  | 'doaj'
+  | 'core';
+
 export interface CanonicalRecord {
   id: string;
   book_id: string;
@@ -54,7 +65,7 @@ export interface CanonicalRecord {
   pub_year: number | null;
   doi: string | null;
   pmid: string | null;
-  source_db: 'pubmed' | 'europe_pmc';
+  source_db: LiteratureSource;
   raw_metadata: Record<string, unknown>;
   created_at: string;
 }
@@ -119,23 +130,23 @@ export interface Database {
     Tables: {
       profiles: {
         Row: Profile;
-        Insert: Omit<Profile, 'created_at'>;
+        Insert: Partial<Profile> & { email: string };
         Update: Partial<Omit<Profile, 'id'>>;
       };
       research_books: {
         Row: ResearchBook;
-        Insert: Omit<ResearchBook, 'id' | 'created_at' | 'updated_at'>;
+        Insert: Partial<ResearchBook> & { title: string };
         Update: Partial<Omit<ResearchBook, 'id' | 'user_id'>>;
       };
       query_versions: {
         Row: QueryVersion;
-        Insert: Omit<QueryVersion, 'id' | 'created_at'>;
+        Insert: Partial<QueryVersion> & { book_id: string; raw_user_query: string };
         Update: Partial<Omit<QueryVersion, 'id'>>;
       };
-      records: {
+      canonical_records: {
         Row: CanonicalRecord;
-        Insert: Omit<CanonicalRecord, 'id' | 'created_at'>;
-        Update: Partial<Omit<CanonicalRecord, 'id'>>;
+        Insert: Partial<CanonicalRecord> & { id: string; book_id: string; title: string };
+        Update: Partial<CanonicalRecord>;
       };
       query_record_links: {
         Row: QueryRecordLink;
@@ -144,14 +155,52 @@ export interface Database {
       };
       screening_decisions: {
         Row: ScreeningDecision;
-        Insert: Omit<ScreeningDecision, 'id' | 'updated_at'>;
-        Update: Partial<Omit<ScreeningDecision, 'id'>>;
+        Insert: Partial<ScreeningDecision> & { book_id: string; record_id: string };
+        Update: Partial<ScreeningDecision>;
       };
       audit_logs: {
         Row: AuditLog;
-        Insert: Omit<AuditLog, 'id' | 'created_at'>;
+        Insert: Partial<AuditLog> & { book_id: string; action: string };
         Update: never;
       };
     };
   };
+}
+
+export type VerdictType =
+  | 'Affirmative / Beneficial'
+  | 'Partially Supported / Nuanced'
+  | 'No Effect / Ineffective'
+  | 'Harmful / Adverse'
+  | 'Inconclusive / Insufficient Evidence';
+
+export type EvidenceCertainty = 'High' | 'Moderate' | 'Low' | 'Very Low';
+
+export interface PerStudyEvidenceContribution {
+  recordId?: string;
+  paperTitle: string;
+  citation: string;
+  direction: 'Supports' | 'Neutral' | 'Opposes' | 'Contextual';
+  keyEvidenceContribution: string;
+  reportedEffectiveness: string;
+  studyDesign?: string;
+}
+
+export interface EvidenceSynthesisResult {
+  query: string;
+  executiveAnswer: string;
+  overallVerdict: VerdictType;
+  evidenceStrength: EvidenceCertainty;
+  evidenceStrengthRationale: string;
+  detailedReasoning: {
+    stepByStepSynthesis: string[];
+    keyMechanisms: string;
+    evidenceConsistency: string;
+    limitationsAndGaps: string[];
+  };
+  perStudyBreakdown: PerStudyEvidenceContribution[];
+  clinicalRecommendations: string[];
+  plainLanguageSummary: string;
+  totalPapersAnalyzed: number;
+  synthesizedAt: string;
 }

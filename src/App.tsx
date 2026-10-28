@@ -8,9 +8,10 @@ import { AuthModal } from './components/auth/AuthModal';
 import { ResearchBooksDashboard } from './components/dashboard/ResearchBooksDashboard';
 import { SimplePicoFlow } from './components/simple/SimplePicoFlow';
 import { PlatformGuideView } from './components/guide/PlatformGuideView';
+import { SupabaseConfigModal } from './components/common/SupabaseConfigModal';
 import { ThemeSwitcher } from './components/ui/ThemeSwitcher';
-import { localStore, supabase, isSupabaseConfigured } from './lib/supabase';
-import { Profile, ResearchBook, PicoConfig } from './types/database';
+import { localStore, supabase, isSupabaseConfigured, supabaseUrl, supabaseAnonKey } from './lib/supabase';
+import { Profile, ResearchBook, PicoConfig, CanonicalRecord, LiteratureSource } from './types/database';
 import { ThemeMode } from './types/theme';
 import {
   SlidersHorizontal,
@@ -32,6 +33,7 @@ export default function App() {
   const [viewMode, setViewMode] = useState<'simple' | 'advanced' | 'guide'>('simple');
   const [advancedInitialTab, setAdvancedInitialTab] = useState<'books' | 'query' | 'fetch' | 'screening' | 'loop' | 'guide'>('books');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isSupabaseConfigOpen, setIsSupabaseConfigOpen] = useState(false);
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof window !== 'undefined') {
       return (localStorage.getItem('mini_rayyan_theme') as ThemeMode) || 'emerald-sage';
@@ -73,20 +75,27 @@ export default function App() {
         }
 
         // Check persistent local store for remembered user
-        const localUser = localStore.getCurrentUser();
-        if (localUser) {
-          setUser(localUser);
-          const loadedBooks = localStore.getBooks(localUser.id);
-          setBooks(loadedBooks);
-          setActiveBookId(localStore.getActiveBookId() || loadedBooks[0]?.id || null);
-          setIsAuthModalOpen(false);
-        } else {
-          // If no user is logged in, do not load default content, and immediately pop up Sign In modal
-          setUser(null);
-          setBooks([]);
-          setActiveBookId(null);
-          setIsAuthModalOpen(true);
+        let localUser = localStore.getCurrentUser();
+        if (!localUser) {
+          // Provide instant offline researcher profile for preview & hackathon evaluation
+          localUser = {
+            id: 'usr-offline-researcher',
+            email: 'researcher@rayyan-screening.org',
+            created_at: new Date().toISOString(),
+          };
+          localStore.setCurrentUser(localUser, false);
         }
+
+        setUser(localUser);
+        let loadedBooks = localStore.getBooks(localUser.id);
+        if (loadedBooks.length === 0) {
+          // Auto-seed sample demo workspace so user immediately has live data to interact with
+          const demoBook = localStore.seedDemoDataset(localUser.id);
+          loadedBooks = [demoBook];
+        }
+        setBooks(loadedBooks);
+        setActiveBookId(localStore.getActiveBookId() || loadedBooks[0]?.id || null);
+        setIsAuthModalOpen(false);
       } catch (err) {
         console.error('Initialization error:', err);
       } finally {
@@ -142,12 +151,26 @@ export default function App() {
     showToast('Signed out successfully.');
   };
 
-  const handleCreateBook = (title: string, description: string, pico: PicoConfig) => {
-    const newBook = localStore.createBook(title, description, pico, user?.id);
+  const handleCreateBook = (
+    title: string,
+    description: string,
+    pico: PicoConfig,
+    defaultSources?: LiteratureSource[],
+    initialRecords?: CanonicalRecord[]
+  ) => {
+    const newBook = localStore.createBook(title, description, pico, user?.id, defaultSources);
+    if (initialRecords && initialRecords.length > 0) {
+      // Re-assign book_id for newly created book and persist
+      const recordsToStore = initialRecords.map((r) => ({
+        ...r,
+        book_id: newBook.id,
+      }));
+      localStore.addRecords(recordsToStore);
+    }
     const updatedBooks = localStore.getBooks(user?.id);
     setBooks(updatedBooks);
     setActiveBookId(newBook.id);
-    showToast(`Created Research Book: "${title}"`);
+    showToast(`Created Research Book: "${title}" (${(defaultSources || []).join(', ')})`);
   };
 
   const handleSelectBook = (bookId: string) => {
@@ -235,19 +258,21 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-2.5">
-              {/* Hackathon Dual-Engine Database Status Indicator */}
-              <div 
-                className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border"
+              {/* Database Status Button: Opens Supabase Config Modal */}
+              <button
+                type="button"
+                onClick={() => setIsSupabaseConfigOpen(true)}
+                className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono border cursor-pointer hover:brightness-110 transition-all"
                 style={{
-                  backgroundColor: isSupabaseConfigured ? 'rgba(56, 189, 248, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                  borderColor: isSupabaseConfigured ? 'rgba(56, 189, 248, 0.3)' : 'rgba(16, 185, 129, 0.3)',
-                  color: isSupabaseConfigured ? '#38bdf8' : '#10b981',
+                  backgroundColor: isSupabaseConfigured ? 'rgba(56, 189, 248, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                  borderColor: isSupabaseConfigured ? 'rgba(56, 189, 248, 0.3)' : 'rgba(245, 158, 11, 0.3)',
+                  color: isSupabaseConfigured ? '#38bdf8' : '#f59e0b',
                 }}
-                title={isSupabaseConfigured ? 'Connected to remote Supabase PostgreSQL database' : 'Running on high-performance Localhost Database (100% Offline Ready)'}
+                title={isSupabaseConfigured ? 'Connected to Supabase PostgreSQL database. Click to view settings.' : 'Click to connect your Supabase database.'}
               >
-                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: isSupabaseConfigured ? '#38bdf8' : '#10b981' }} />
-                <span>{isSupabaseConfigured ? 'Cloud: Supabase' : 'Local DB: Offline'}</span>
-              </div>
+                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: isSupabaseConfigured ? '#38bdf8' : '#f59e0b' }} />
+                <span>{isSupabaseConfigured ? 'Database: Supabase' : 'Connect Supabase'}</span>
+              </button>
 
               {/* Instant Hackathon Demo Dataset Seeder */}
               <button
@@ -377,6 +402,22 @@ export default function App() {
                 <span className="hidden sm:inline">Advanced Mode</span>
               </button>
 
+              {/* Supabase Database Status Button */}
+              <button
+                type="button"
+                onClick={() => setIsSupabaseConfigOpen(true)}
+                className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono border cursor-pointer hover:brightness-110 transition-all"
+                style={{
+                  backgroundColor: isSupabaseConfigured ? 'rgba(56, 189, 248, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                  borderColor: isSupabaseConfigured ? 'rgba(56, 189, 248, 0.3)' : 'rgba(245, 158, 11, 0.3)',
+                  color: isSupabaseConfigured ? '#38bdf8' : '#f59e0b',
+                }}
+                title={isSupabaseConfigured ? 'Connected to Supabase PostgreSQL database. Click to view settings.' : 'Click to connect your Supabase database.'}
+              >
+                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: isSupabaseConfigured ? '#38bdf8' : '#f59e0b' }} />
+                <span>{isSupabaseConfigured ? 'Database: Supabase' : 'Connect Supabase'}</span>
+              </button>
+
               {/* Theme Switcher */}
               <ThemeSwitcher currentTheme={theme} onThemeChange={setTheme} />
 
@@ -432,6 +473,7 @@ export default function App() {
               user={user}
               onOpenAuthModal={() => setIsAuthModalOpen(true)}
               onOpenGuide={() => setViewMode('guide')}
+              currentTheme={theme}
             />
           ) : viewMode === 'guide' ? (
             <PlatformGuideView
@@ -457,9 +499,35 @@ export default function App() {
               onSwitchToSimpleMode={() => setViewMode('simple')}
               initialTab={advancedInitialTab}
               onSeedDemo={handleSeedDemo}
+              onOpenSupabaseConfig={() => setIsSupabaseConfigOpen(true)}
             />
           )}
         </main>
+
+        {/* Supabase Configuration & Connection Modal */}
+        <SupabaseConfigModal
+          isOpen={isSupabaseConfigOpen}
+          onClose={() => setIsSupabaseConfigOpen(false)}
+          currentUrl={supabaseUrl}
+          currentKey={supabaseAnonKey}
+          isConfigured={isSupabaseConfigured}
+          onSaved={() => {
+            showToast('Supabase settings updated. Connecting...');
+            window.location.reload();
+          }}
+        />
+
+        {/* Authentication Modal */}
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          onAuthSuccess={(profile: Profile) => {
+            setUser(profile);
+            showToast(`Signed in as ${profile.email}`);
+          }}
+          currentUser={user}
+          onLogout={handleLogout}
+        />
       </div>
     </div>
   );

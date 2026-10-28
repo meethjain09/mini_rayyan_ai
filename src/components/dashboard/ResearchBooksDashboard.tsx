@@ -21,10 +21,18 @@ import {
   CheckCircle2,
   GitCompare,
   HelpCircle,
+  Globe,
+  Database,
+  ExternalLink,
+  RefreshCw,
+  Eye,
+  Check,
+  Layers,
 } from 'lucide-react';
-import { ResearchBook, Profile, PicoConfig, QueryVersion } from '../../types/database';
+import { ResearchBook, Profile, PicoConfig, QueryVersion, LiteratureSource, CanonicalRecord } from '../../types/database';
 import { ThemeMode } from '../../types/theme';
 import { isSupabaseConfigured } from '../../lib/supabase';
+import { searchService, MultiSourceSearchResult, SearchAdapterMetadata } from '../../services/search';
 import { ThemeSwitcher } from '../ui/ThemeSwitcher';
 import { ClinicalQueryInterface } from '../query/ClinicalQueryInterface';
 import { FetchAndDeduplicateView } from '../fetch/FetchAndDeduplicateView';
@@ -37,7 +45,13 @@ interface ResearchBooksDashboardProps {
   books: ResearchBook[];
   activeBookId: string | null;
   onSelectBook: (bookId: string) => void;
-  onCreateBook: (title: string, description: string, pico: PicoConfig) => void;
+  onCreateBook: (
+    title: string,
+    description: string,
+    pico: PicoConfig,
+    defaultSources?: LiteratureSource[],
+    initialRecords?: CanonicalRecord[]
+  ) => void;
   onDeleteBook: (bookId: string) => void;
   onLogout: () => void;
   currentTheme: ThemeMode;
@@ -45,6 +59,7 @@ interface ResearchBooksDashboardProps {
   onSwitchToSimpleMode?: () => void;
   onSeedDemo?: () => void;
   initialTab?: 'books' | 'query' | 'fetch' | 'screening' | 'loop' | 'guide';
+  onOpenSupabaseConfig?: () => void;
 }
 
 export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
@@ -60,6 +75,7 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
   onSwitchToSimpleMode,
   onSeedDemo,
   initialTab,
+  onOpenSupabaseConfig,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -84,6 +100,50 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
     'Non-English publications',
     'In silico or mathematical simulations',
   ]);
+
+  // Search Service Adapter Pattern State for Research Book Creation
+  const availableAdapters = searchService.getAvailableAdapters();
+  const [selectedSources, setSelectedSources] = useState<LiteratureSource[]>([
+    'openalex',
+    'crossref',
+    'semanticscholar',
+  ]);
+  const [previewQuery, setPreviewQuery] = useState('');
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [previewResults, setPreviewResults] = useState<MultiSourceSearchResult | null>(null);
+  const [seedWithPreview, setSeedWithPreview] = useState(true);
+
+  // Toggle adapter sources
+  const handleToggleSource = (sourceId: LiteratureSource) => {
+    setSelectedSources((prev) => {
+      if (prev.includes(sourceId)) {
+        if (prev.length === 1) return prev; // At least one source required
+        return prev.filter((s) => s !== sourceId);
+      } else {
+        return [...prev, sourceId];
+      }
+    });
+  };
+
+  // Live test and preview via SearchService adapters
+  const handleRunPreview = async () => {
+    const queryToUse =
+      previewQuery.trim() ||
+      newTitle.trim() ||
+      `${population} ${intervention}`.trim() ||
+      'GLP-1 diabetes cardiovascular trials';
+    if (!queryToUse) return;
+
+    setIsPreviewLoading(true);
+    try {
+      const res = await searchService.searchAcrossSources(queryToUse, selectedSources, { limit: 4 });
+      setPreviewResults(res);
+    } catch (err) {
+      console.error('Search adapter preview error:', err);
+    } finally {
+      setIsPreviewLoading(false);
+    }
+  };
 
   // Filter books by search query
   const filteredBooks = books.filter((b) => {
@@ -111,7 +171,13 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
       exclusionCriteria: exclusionList,
     };
 
-    onCreateBook(newTitle.trim(), newDescription.trim(), pico);
+    onCreateBook(
+      newTitle.trim(),
+      newDescription.trim(),
+      pico,
+      selectedSources,
+      seedWithPreview && previewResults ? previewResults.allRecords : undefined
+    );
 
     // Reset form
     setNewTitle('');
@@ -120,6 +186,9 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
     setIntervention('');
     setComparator('');
     setOutcome('');
+    setPreviewResults(null);
+    setPreviewQuery('');
+    setSelectedSources(['openalex', 'crossref', 'semanticscholar']);
     setIsCreateModalOpen(false);
   };
 
@@ -144,6 +213,7 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
     setIntervention('GLP-1 receptor agonists (Semaglutide, Liraglutide, Dulaglutide)');
     setComparator('Placebo or standard diabetes care');
     setOutcome('Composite 3-point MACE (cardiovascular death, nonfatal MI, nonfatal stroke), all-cause mortality');
+    setPreviewQuery('GLP-1 receptor agonists diabetes cardiovascular trials');
     setInclusionList([
       'Double-blind randomized controlled cardiovascular outcomes trials (CVOTs)',
       'Median follow-up period ≥ 12 months',
@@ -261,19 +331,21 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
 
           {/* Right: Actions, Theme Switcher & Logout (Spacious and never overflowed) */}
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-            {/* Hackathon Dual-Engine Database Status Indicator */}
-            <div 
-              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border"
+            {/* Supabase Database Status / Config Button */}
+            <button
+              type="button"
+              onClick={onOpenSupabaseConfig}
+              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border cursor-pointer hover:brightness-110 transition-all"
               style={{
-                backgroundColor: isSupabaseConfigured ? 'rgba(56, 189, 248, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                borderColor: isSupabaseConfigured ? 'rgba(56, 189, 248, 0.3)' : 'rgba(16, 185, 129, 0.3)',
-                color: isSupabaseConfigured ? '#38bdf8' : '#10b981',
+                backgroundColor: isSupabaseConfigured ? 'rgba(56, 189, 248, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                borderColor: isSupabaseConfigured ? 'rgba(56, 189, 248, 0.3)' : 'rgba(245, 158, 11, 0.3)',
+                color: isSupabaseConfigured ? '#38bdf8' : '#f59e0b',
               }}
-              title={isSupabaseConfigured ? 'Connected to remote Supabase PostgreSQL database' : 'Running on high-performance Localhost Database (100% Offline Ready)'}
+              title={isSupabaseConfigured ? 'Connected to remote Supabase PostgreSQL database. Click to view configuration.' : 'Supabase database is not connected. Click to enter Supabase URL & Key.'}
             >
-              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: isSupabaseConfigured ? '#38bdf8' : '#10b981' }} />
-              <span>{isSupabaseConfigured ? 'Cloud: Supabase' : 'Local DB: Offline'}</span>
-            </div>
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: isSupabaseConfigured ? '#38bdf8' : '#f59e0b' }} />
+              <span>{isSupabaseConfigured ? 'Database: Supabase' : 'Connect Supabase'}</span>
+            </button>
 
             {/* Quick Demo Dataset Seeder */}
             {onSeedDemo && (
@@ -465,6 +537,7 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
           <ScreeningDashboard
             book={activeBook}
             onBackToFetch={() => setActiveTab('fetch')}
+            currentTheme={currentTheme}
           />
         ) : activeTab === 'loop' && activeBook ? (
           <Level2LoopDiffView
@@ -661,6 +734,29 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
                       <SlidersHorizontal className="w-3 h-3" />
                       {book.pico_config.exclusionCriteria?.length || 0} Exclusions
                     </span>
+                  </div>
+
+                  {/* Configured Search Service Adapters */}
+                  <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-mono uppercase tracking-wider opacity-60 mr-0.5" style={{ color: 'var(--text-muted)' }}>
+                      APIs:
+                    </span>
+                    {(book.default_sources && book.default_sources.length > 0
+                      ? book.default_sources
+                      : (['openalex', 'crossref', 'semanticscholar'] as LiteratureSource[])
+                    ).map((src) => {
+                      const meta = availableAdapters.find((a) => a.id === src);
+                      return (
+                        <span
+                          key={src}
+                          className={`text-[9px] font-mono px-2 py-0.5 rounded-md border font-semibold ${
+                            meta?.badgeClass || 'bg-slate-500/15 text-slate-300 border-slate-500/30'
+                          }`}
+                        >
+                          {meta?.shortName || src}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -980,6 +1076,196 @@ export const ResearchBooksDashboard: React.FC<ResearchBooksDashboardProps> = ({
                       </button>
                     </span>
                   ))}
+                </div>
+              </div>
+
+              {/* Search Service API Adapters (Adapter Pattern) */}
+              <div className="pt-3 border-t space-y-3" style={{ borderColor: 'var(--border-subtle)' }}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Database className="w-3.5 h-3.5" style={{ color: 'var(--accent-primary)' }} />
+                    <h4 className="text-[11px] font-mono font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>
+                      Search Service: Multi-Source Adapters
+                    </h4>
+                  </div>
+                  <span className="text-[10px] font-mono" style={{ color: 'var(--accent-primary)' }}>
+                    {selectedSources.length} of {availableAdapters.length} Adapters Active
+                  </span>
+                </div>
+                <p className="text-[11px] font-sans" style={{ color: 'var(--text-muted)' }}>
+                  Select which scholarly catalogs to query for this protocol. Each engine uses a dedicated adapter implementing our unified Search Service architecture.
+                </p>
+
+                {/* Adapter Cards Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {availableAdapters.map((adapter) => {
+                    const isSelected = selectedSources.includes(adapter.id);
+                    return (
+                      <div
+                        key={adapter.id}
+                        onClick={() => handleToggleSource(adapter.id)}
+                        className={`p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between select-none ${
+                          isSelected
+                            ? 'theme-glass-card ring-1 ring-[var(--accent-primary)]/40 shadow-sm'
+                            : 'opacity-50 hover:opacity-80 border-dashed border-[var(--border-subtle)] bg-black/10'
+                        }`}
+                        style={{ borderColor: isSelected ? 'var(--accent-primary)' : 'var(--border-subtle)' }}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold border ${adapter.badgeClass}`}>
+                              {adapter.shortName}
+                            </span>
+                            <div
+                              className={`w-4 h-4 rounded-md flex items-center justify-center border text-[10px] transition-all ${
+                                isSelected
+                                  ? 'bg-[var(--accent-primary)] text-black border-transparent font-bold'
+                                  : 'border-white/20'
+                              }`}
+                            >
+                              {isSelected ? <Check className="w-3 h-3 stroke-[3]" /> : null}
+                            </div>
+                          </div>
+                          <h5 className="text-xs font-bold font-display" style={{ color: 'var(--text-primary)' }}>
+                            {adapter.name}
+                          </h5>
+                          <p className="mt-1 text-[10px] leading-tight font-sans line-clamp-2" style={{ color: 'var(--text-muted)' }}>
+                            {adapter.description}
+                          </p>
+                        </div>
+
+                        <div className="mt-2.5 pt-2 border-t flex items-center justify-between text-[9px] font-mono" style={{ borderColor: 'var(--border-subtle)' }}>
+                          <span style={{ color: 'var(--text-dim)' }}>{adapter.freeTierInfo}</span>
+                          {isSelected && (
+                            <span className="flex items-center gap-1 text-[9px] font-semibold" style={{ color: 'var(--accent-primary)' }}>
+                              <span className="w-1.5 h-1.5 rounded-full animate-pulse bg-emerald-400" />
+                              Active
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Live Preview / Adapter Verification Drawer */}
+                <div className="p-3.5 rounded-2xl theme-glass-base border space-y-2.5" style={{ borderColor: 'var(--border-subtle)' }}>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Eye className="w-3.5 h-3.5" style={{ color: 'var(--accent-primary)' }} />
+                      <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>
+                        Live Search Adapter Test &amp; Preview
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleRunPreview}
+                        disabled={isPreviewLoading || selectedSources.length === 0}
+                        className="px-3 py-1.5 theme-primary-btn text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        {isPreviewLoading ? (
+                          <>
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                            <span>Querying Adapters...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Search className="w-3 h-3" />
+                            <span>Verify &amp; Preview Sources</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={previewQuery}
+                      onChange={(e) => setPreviewQuery(e.target.value)}
+                      placeholder={
+                        newTitle || (population && intervention ? `${population} ${intervention}` : 'e.g. Metformin type 2 diabetes cardiovascular trials')
+                      }
+                      className="flex-1 px-3 py-1.5 theme-glass-input rounded-xl text-xs placeholder:opacity-40 focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)] font-sans"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const candidate = newTitle || `${population} ${intervention}` || 'GLP-1 receptor agonists cardiovascular';
+                        setPreviewQuery(candidate);
+                      }}
+                      className="px-2.5 py-1.5 theme-glass-input text-[11px] font-mono rounded-xl hover:brightness-110 cursor-pointer"
+                      style={{ color: 'var(--text-secondary)' }}
+                      title="Use Protocol Title / PICO terms"
+                    >
+                      Use PICO
+                    </button>
+                  </div>
+
+                  {/* Preview Results Display */}
+                  {previewResults && (
+                    <div className="mt-2 pt-2 border-t space-y-2 animate-in fade-in duration-300" style={{ borderColor: 'var(--border-subtle)' }}>
+                      <div className="flex items-center justify-between text-[11px] font-mono">
+                        <span className="font-semibold text-emerald-400 flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>{previewResults.totalCount} papers retrieved across {selectedSources.length} active adapters</span>
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {Object.entries(previewResults.resultsBySource).map(([src, stat]) => (
+                            <span key={src} className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/80">
+                              {src}: {stat.count}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Paper Records Strip */}
+                      <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
+                        {previewResults.allRecords.slice(0, 6).map((paper) => {
+                          const adapterMeta = availableAdapters.find((a) => a.id === paper.source_db);
+                          return (
+                            <div
+                              key={paper.id}
+                              className="p-2.5 rounded-xl border theme-glass-card text-left text-xs"
+                              style={{ borderColor: 'var(--border-subtle)' }}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <h6 className="font-semibold text-[11px] leading-snug line-clamp-1" style={{ color: 'var(--text-primary)' }}>
+                                  {paper.title}
+                                </h6>
+                                <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border shrink-0 ${adapterMeta?.badgeClass || 'bg-white/10'}`}>
+                                  {adapterMeta?.shortName || paper.source_db}
+                                </span>
+                              </div>
+                              <p className="text-[10px] mt-1 line-clamp-1" style={{ color: 'var(--text-muted)' }}>
+                                {paper.authors.slice(0, 3).join(', ')} ({paper.pub_year || 'n.d.'}) · {paper.journal || 'Journal'}
+                                {paper.doi && ` · DOI: ${paper.doi}`}
+                              </p>
+                              {paper.abstract && (
+                                <p className="text-[10px] mt-1 line-clamp-2 italic" style={{ color: 'var(--text-secondary)' }}>
+                                  "{paper.abstract}"
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Seed with preview records toggle */}
+                      <label className="flex items-center gap-2 cursor-pointer pt-1 text-xs select-none">
+                        <input
+                          type="checkbox"
+                          checked={seedWithPreview}
+                          onChange={(e) => setSeedWithPreview(e.target.checked)}
+                          className="rounded text-[var(--accent-primary)] focus:ring-0"
+                        />
+                        <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                          Automatically seed newly created book with these {previewResults.totalCount} retrieved records
+                        </span>
+                      </label>
+                    </div>
+                  )}
                 </div>
               </div>
 

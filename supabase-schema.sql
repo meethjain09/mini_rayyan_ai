@@ -68,8 +68,7 @@ CREATE TABLE IF NOT EXISTS public.canonical_records (
   journal TEXT,
   pub_year INTEGER,
   doi TEXT,
-  pmid TEXT,
-  source_db TEXT NOT NULL CHECK (source_db IN ('pubmed', 'europe_pmc')),
+  source_db TEXT NOT NULL,
   raw_metadata JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW()) NOT NULL
 );

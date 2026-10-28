@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Database, ResearchBook, Profile, QueryVersion, CanonicalRecord, ScreeningDecision, AuditLog, RunLogEntry, QueryRecordLink } from '../types/database';
+import { Database, ResearchBook, Profile, QueryVersion, CanonicalRecord, ScreeningDecision, AuditLog, RunLogEntry, QueryRecordLink, LiteratureSource } from '../types/database';
 
 // Persistent storage keys
 export const STORAGE_KEYS = {
@@ -17,9 +17,12 @@ export const STORAGE_KEYS = {
   RUN_LOGS: 'mini_rayyan_run_logs',
 };
 
-// Environment configuration
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const env = (typeof import.meta !== 'undefined' && import.meta?.env) ? import.meta.env : ((typeof process !== 'undefined' && process?.env) ? process.env : {}) as any;
+const getStoredSupabaseUrl = () => typeof window !== 'undefined' ? localStorage.getItem('mini_rayyan_supabase_url') || '' : '';
+const getStoredSupabaseKey = () => typeof window !== 'undefined' ? localStorage.getItem('mini_rayyan_supabase_key') || '' : '';
+
+export const supabaseUrl = env.VITE_SUPABASE_URL || getStoredSupabaseUrl() || '';
+export const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || getStoredSupabaseKey() || '';
 
 export const isSupabaseConfigured = Boolean(
   supabaseUrl && 
@@ -32,12 +35,109 @@ export const supabase: SupabaseClient<Database> | null = isSupabaseConfigured
   ? createClient<Database>(supabaseUrl, supabaseAnonKey)
   : null;
 
-// Local persistent mock store for instant testing & offline readiness
-class LocalStorageStore {
+// Supabase PostgreSQL Client & Local Cache Layer
+class SupabaseStore {
   private userKey = STORAGE_KEYS.USER;
   private booksKey = STORAGE_KEYS.BOOKS;
   private activeBookKey = STORAGE_KEYS.ACTIVE_BOOK;
   private queryVersionsKey = STORAGE_KEYS.QUERY_VERSIONS;
+
+  private syncBookToSupabase(book: ResearchBook) {
+    if (isSupabaseConfigured && supabase) {
+      (supabase as any)
+        .from('research_books')
+        .upsert({
+          id: book.id,
+          user_id: book.user_id,
+          title: book.title,
+          description: book.description,
+          pico_config: book.pico_config,
+          created_at: book.created_at,
+          updated_at: book.updated_at,
+        })
+        .then(({ error }: any) => {
+          if (error) console.warn('Supabase book sync notice:', error.message);
+        });
+    }
+  }
+
+  private deleteBookFromSupabase(id: string) {
+    if (isSupabaseConfigured && supabase) {
+      (supabase as any).from('research_books').delete().eq('id', id).then(({ error }: any) => {
+        if (error) console.warn('Supabase book deletion notice:', error.message);
+      });
+    }
+  }
+
+  private syncQueryVersionToSupabase(qv: QueryVersion) {
+    if (isSupabaseConfigured && supabase) {
+      (supabase as any).from('query_versions').upsert({
+        id: qv.id,
+        book_id: qv.book_id,
+        version_number: qv.version_number,
+        raw_user_query: qv.raw_user_query,
+        boolean_query: qv.boolean_query,
+        date_start: qv.date_start,
+        date_end: qv.date_end,
+        total_hits: qv.total_hits,
+        created_at: qv.created_at,
+      }).then(({ error }: any) => {
+        if (error) console.warn('Supabase query version sync notice:', error.message);
+      });
+    }
+  }
+
+  private syncRecordsToSupabase(records: CanonicalRecord[], queryVersionId: string) {
+    if (isSupabaseConfigured && supabase && records.length > 0) {
+      const dbRecords = records.map((r) => ({
+        id: r.id,
+        book_id: r.book_id,
+        cluster_id: r.cluster_id,
+        title: r.title,
+        abstract: r.abstract,
+        authors: r.authors,
+        journal: r.journal,
+        pub_year: r.pub_year,
+        doi: r.doi,
+        pmid: r.pmid,
+        source_db: r.source_db,
+        raw_metadata: r.raw_metadata,
+        created_at: r.created_at,
+      }));
+      (supabase as any).from('canonical_records').upsert(dbRecords).then(({ error }: any) => {
+        if (error) console.warn('Supabase records sync notice:', error.message);
+      });
+
+      const links = records.map((r) => ({
+        query_version_id: queryVersionId,
+        record_id: r.id,
+      }));
+      (supabase as any).from('query_record_links').upsert(links).then(({ error }: any) => {
+        if (error) console.warn('Supabase record links sync notice:', error.message);
+      });
+    }
+  }
+
+  private syncDecisionToSupabase(decision: ScreeningDecision) {
+    if (isSupabaseConfigured && supabase) {
+      (supabase as any).from('screening_decisions').upsert({
+        id: decision.id,
+        book_id: decision.book_id,
+        record_id: decision.record_id,
+        cluster_id: decision.cluster_id,
+        status: decision.status,
+        exclusion_reason: decision.exclusion_reason,
+        is_duplicate: decision.is_duplicate,
+        duplicate_of_record_id: decision.duplicate_of_record_id,
+        pico_tags: decision.pico_tags,
+        decision_type: decision.decision_type,
+        notes: decision.notes,
+        updated_at: decision.updated_at,
+      }).then(({ error }: any) => {
+        if (error) console.warn('Supabase decision sync notice:', error.message);
+      });
+    }
+  }
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -139,7 +239,13 @@ class LocalStorageStore {
     localStorage.setItem(this.activeBookKey, id);
   }
 
-  createBook(title: string, description: string, pico: ResearchBook['pico_config'], userId?: string): ResearchBook {
+  createBook(
+    title: string,
+    description: string,
+    pico: ResearchBook['pico_config'],
+    userId?: string,
+    defaultSources?: LiteratureSource[]
+  ): ResearchBook {
     const user = this.getCurrentUser();
     const effectiveUserId = userId || user?.id || 'guest-' + Date.now().toString(36);
     const newBook: ResearchBook = {
@@ -148,6 +254,7 @@ class LocalStorageStore {
       title,
       description,
       pico_config: pico,
+      default_sources: defaultSources || ['openalex', 'crossref', 'semanticscholar'],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -155,6 +262,7 @@ class LocalStorageStore {
     books.unshift(newBook);
     this.saveBooks(books);
     this.setActiveBookId(newBook.id);
+    this.syncBookToSupabase(newBook);
     return newBook;
   }
 
@@ -164,6 +272,7 @@ class LocalStorageStore {
     if (this.getActiveBookId() === id) {
       this.setActiveBookId(books[0]?.id || '');
     }
+    this.deleteBookFromSupabase(id);
   }
 
   getQueryVersions(bookId: string): QueryVersion[] {
@@ -199,6 +308,7 @@ class LocalStorageStore {
     if (typeof window !== 'undefined') {
       localStorage.setItem(this.queryVersionsKey, JSON.stringify(list));
     }
+    this.syncQueryVersionToSupabase(newVersion);
     return newVersion;
   }
 
@@ -238,6 +348,42 @@ class LocalStorageStore {
       }
     });
     localStorage.setItem(this.linksKey, JSON.stringify(links));
+    this.syncRecordsToSupabase(newRecords, queryVersionId);
+  }
+
+  addRecords(records: CanonicalRecord[]): void {
+    if (typeof window === 'undefined' || !records.length) return;
+    const existingRaw = localStorage.getItem(this.recordsKey);
+    const all: CanonicalRecord[] = existingRaw ? JSON.parse(existingRaw) : [];
+    for (const rec of records) {
+      if (!all.some((r) => r.id === rec.id)) {
+        all.push(rec);
+      }
+    }
+    localStorage.setItem(this.recordsKey, JSON.stringify(all));
+
+    // Also initialize default unscreened decisions for each record
+    const decRaw = localStorage.getItem(this.decisionsKey);
+    const decisions: ScreeningDecision[] = decRaw ? JSON.parse(decRaw) : [];
+    for (const rec of records) {
+      if (!decisions.some((d) => d.record_id === rec.id && d.book_id === rec.book_id)) {
+        decisions.push({
+          id: 'dec-' + Math.random().toString(36).substring(2, 9),
+          book_id: rec.book_id,
+          record_id: rec.id,
+          cluster_id: rec.cluster_id || 'cluster-' + rec.id,
+          status: 'unscreened',
+          decision_type: 'machine_suggested',
+          exclusion_reason: null,
+          notes: `Ingested from ${rec.source_db.toUpperCase()} Search Service Adapter`,
+          is_duplicate: false,
+          duplicate_of_record_id: null,
+          pico_tags: { p: [], i: [], c: [], o: [] },
+          updated_at: new Date().toISOString(),
+        });
+      }
+    }
+    localStorage.setItem(this.decisionsKey, JSON.stringify(decisions));
   }
 
   getQueryRecordLinks(): QueryRecordLink[] {
@@ -400,6 +546,9 @@ class LocalStorageStore {
     }
 
     this.saveDecisions(bookId, decisions);
+    if (target) {
+      this.syncDecisionToSupabase(target);
+    }
 
     // Record immutable audit entry
     this.addAuditLog({
@@ -608,7 +757,30 @@ class LocalStorageStore {
       },
     ];
 
+    // Save records to book
     this.saveRecords(bookId, records, 'qv-demo-v2');
+
+    // Explicitly seed query_record_links so v1 and v2 have their distinct + shared records
+    const v1RecordIds = [
+      'rec-demo-empa-reg',
+      'rec-demo-empa-dup',
+      'rec-demo-ukpds-34',
+      'rec-demo-dpp',
+    ];
+    const v2RecordIds = [
+      'rec-demo-empa-reg',
+      'rec-demo-empa-dup',
+      'rec-demo-sustain-6',
+      'rec-demo-sustain-dup',
+      'rec-demo-deliver',
+      'rec-demo-leader',
+    ];
+
+    const seededLinks: QueryRecordLink[] = [
+      ...v1RecordIds.map((id) => ({ query_version_id: 'qv-demo-v1', record_id: id })),
+      ...v2RecordIds.map((id) => ({ query_version_id: 'qv-demo-v2', record_id: id })),
+    ];
+    localStorage.setItem(this.linksKey, JSON.stringify(seededLinks));
 
     // Seed Decisions (Include, Exclude with reasons, Maybe, and Duplicates)
     const decisions: ScreeningDecision[] = [
@@ -748,4 +920,4 @@ class LocalStorageStore {
   }
 }
 
-export const localStore = new LocalStorageStore();
+export const localStore = new SupabaseStore();
