@@ -7,7 +7,8 @@
  * and provides 1-click export of structured screening data.
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Download,
@@ -37,6 +38,23 @@ export const PrismaReportModal: React.FC<PrismaReportModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  // Handle ESC key to dismiss modal
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   // 1. Identification Phase
@@ -146,14 +164,25 @@ export const PrismaReportModal: React.FC<PrismaReportModalProps> = ({
     document.body.removeChild(link);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-md">
+  const modalNode = (
+    <div 
+      className="fixed inset-0 z-[9999] flex items-start justify-center p-3 sm:p-5 pt-3 sm:pt-6 overflow-y-auto bg-black/80 backdrop-blur-md animate-in fade-in duration-150"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="PRISMA 2020 Flow Diagram"
+    >
       <div 
-        className="relative w-full max-w-4xl rounded-3xl p-6 sm:p-8 theme-glass-card shadow-2xl border my-auto"
-        style={{ borderColor: 'var(--border-strong)', maxHeight: '92vh', overflowY: 'auto' }}
+        className="relative w-full max-w-4xl max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-3xl p-6 sm:p-8 theme-glass-card shadow-2xl border overflow-hidden"
+        style={{ borderColor: 'var(--border-strong)', backgroundColor: 'var(--bg-canvas)' }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start justify-between pb-4 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
+        <div className="flex items-start justify-between pb-4 border-b shrink-0" style={{ borderColor: 'var(--border-subtle)' }}>
           <div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full theme-glass-input text-[11px] font-mono mb-1.5" style={{ color: 'var(--accent-primary)' }}>
               <ShieldCheck className="w-3 h-3" />
@@ -188,13 +217,19 @@ export const PrismaReportModal: React.FC<PrismaReportModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-xl opacity-60 hover:opacity-100 cursor-pointer theme-glass-input"
+              className="px-2.5 py-1.5 rounded-xl opacity-80 hover:opacity-100 cursor-pointer theme-glass-input flex items-center gap-1.5"
               style={{ color: 'var(--text-secondary)' }}
+              title="Close modal (Esc)"
+              aria-label="Close modal"
             >
-              <X className="w-5 h-5" />
+              <span className="hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded border border-[var(--border-subtle)] text-[var(--text-muted)] bg-[var(--bg-canvas)]">ESC</span>
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
+
+        {/* Scrollable content container */}
+        <div className="flex-1 overflow-y-auto pr-1">
 
         {/* PRISMA 2020 Interactive Diagram Canvas */}
         <div className="py-6 space-y-6">
@@ -322,13 +357,16 @@ export const PrismaReportModal: React.FC<PrismaReportModalProps> = ({
             </div>
           </div>
         </div>
+        </div>
 
         {/* Footer info note */}
-        <div className="pt-4 border-t flex items-center justify-between text-[11px] font-mono" style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-muted)' }}>
+        <div className="pt-3 border-t flex items-center justify-between text-[11px] font-mono shrink-0" style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-muted)' }}>
           <span>PRISMA 2020 Statement Compliant Flow</span>
           <span>Zero Hard Deletions · Reversible Audit Trail</span>
         </div>
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalNode, document.body) : modalNode;
 };

@@ -8,7 +8,8 @@
  * and 1-click copying of the complete `supabase-schema.sql` database script.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Database,
   CheckCircle2,
@@ -52,6 +53,23 @@ export const SupabaseConfigModal: React.FC<SupabaseConfigModalProps> = ({
   const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [copiedSql, setCopiedSql] = useState(false);
+
+  // Handle ESC key to dismiss modal
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -226,17 +244,28 @@ CREATE POLICY "Users manage own run logs" ON public.run_logs FOR ALL USING (TRUE
     setTimeout(() => setCopiedSql(false), 2500);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+  const modalNode = (
+    <div 
+      className="fixed inset-0 z-[9999] flex items-start justify-center p-3 sm:p-5 pt-3 sm:pt-6 bg-black/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-150"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Supabase Database Connection"
+    >
       <div 
-        className="relative w-full max-w-2xl flex flex-col rounded-3xl theme-glass-card shadow-2xl overflow-hidden border border-[var(--border-card)]"
+        className="relative w-full max-w-2xl max-h-[92vh] sm:max-h-[90vh] flex flex-col rounded-3xl theme-glass-card shadow-2xl overflow-hidden border border-[var(--border-card)]"
         style={{ backgroundColor: 'var(--bg-canvas)' }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)] bg-[var(--glass-card-bg)]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)] bg-[var(--glass-card-bg)] shrink-0">
           <div className="flex items-center gap-3">
             <div 
-              className="p-2.5 rounded-2xl flex items-center justify-center"
+              className="p-2.5 rounded-2xl flex items-center justify-center shadow-md"
               style={{ backgroundColor: 'var(--pico-p-bg)', color: 'var(--accent-primary)' }}
             >
               <Database className="w-5 h-5" />
@@ -254,9 +283,12 @@ CREATE POLICY "Users manage own run logs" ON public.run_logs FOR ALL USING (TRUE
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl theme-glass-input hover:brightness-110 transition cursor-pointer"
+            className="px-2.5 py-1.5 rounded-xl theme-glass-input hover:brightness-110 transition cursor-pointer flex items-center gap-1.5"
             style={{ color: 'var(--text-muted)' }}
+            title="Close modal (Esc)"
+            aria-label="Close modal"
           >
+            <span className="hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded border border-[var(--border-subtle)] text-[var(--text-muted)] bg-[var(--bg-canvas)]">ESC</span>
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -381,14 +413,15 @@ CREATE POLICY "Users manage own run logs" ON public.run_logs FOR ALL USING (TRUE
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-[var(--border-subtle)] bg-[var(--glass-card-bg)]">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-[var(--border-subtle)] bg-[var(--glass-card-bg)] shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-mono opacity-60 hover:opacity-100 cursor-pointer"
+            className="px-4 py-2 text-xs font-mono opacity-60 hover:opacity-100 cursor-pointer flex items-center gap-1.5"
             style={{ color: 'var(--text-muted)' }}
           >
-            Cancel
+            <span>Cancel</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-[var(--border-subtle)]">ESC</span>
           </button>
 
           <button
@@ -403,4 +436,6 @@ CREATE POLICY "Users manage own run logs" ON public.run_logs FOR ALL USING (TRUE
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalNode, document.body) : modalNode;
 };

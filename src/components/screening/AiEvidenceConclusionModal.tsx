@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Sparkles,
   CheckCircle,
@@ -154,6 +155,23 @@ export const AiEvidenceConclusionModal: React.FC<AiEvidenceConclusionModalProps>
     }
   };
 
+  // Handle ESC key to dismiss modal
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   // Trigger on open if no synthesis has run yet
   useEffect(() => {
     if (isOpen && !synthesis && !loading) {
@@ -289,49 +307,58 @@ ${synthesis.plainLanguageSummary}
     }
   };
 
-  return (
+  const modalNode = (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-[9999] flex items-start justify-center p-3 sm:p-5 pt-3 sm:pt-6 bg-black/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-150"
       data-theme={currentTheme}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="AI Evidence Synthesis & Clinical Conclusion"
     >
       <div 
-        className="relative w-full max-w-5xl max-h-[92vh] flex flex-col rounded-3xl theme-glass-card shadow-2xl overflow-hidden border border-[var(--border-card)]"
+        className="relative w-full max-w-5xl h-[92vh] sm:h-[90vh] flex flex-col rounded-3xl theme-glass-card shadow-2xl overflow-hidden border border-[var(--border-card)]"
         style={{ backgroundColor: 'var(--bg-canvas)' }}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Top Header - Synced to Active Theme */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)] bg-[var(--glass-card-bg)]">
-          <div className="flex items-center gap-3">
+        {/* Modal Top Header - Synced to Active Theme & Fixed at Top */}
+        <div className="flex items-center justify-between px-5 sm:px-6 py-3.5 border-b border-[var(--border-subtle)] bg-[var(--glass-card-bg)] shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
             <div 
-              className="p-2.5 rounded-2xl flex items-center justify-center shadow-lg"
+              className="p-2.5 rounded-2xl flex items-center justify-center shadow-lg shrink-0"
               style={{ backgroundColor: 'var(--pico-p-bg)', color: 'var(--accent-primary)' }}
             >
               <Sparkles className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-bold font-display tracking-tight" style={{ color: 'var(--text-primary)' }}>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-base sm:text-lg font-bold font-display tracking-tight truncate" style={{ color: 'var(--text-primary)' }}>
                   AI Evidence Synthesis &amp; Clinical Conclusion
                 </h2>
                 <span 
-                  className="px-2.5 py-0.5 text-[11px] font-mono font-semibold rounded-full border"
+                  className="px-2.5 py-0.5 text-[11px] font-mono font-semibold rounded-full border shrink-0"
                   style={{ backgroundColor: 'var(--pico-p-bg)', borderColor: 'var(--pico-p-border)', color: 'var(--pico-p-text)' }}
                 >
                   {includedRecords.length} {includedRecords.length === 1 ? 'Paper' : 'Papers'} Included
                 </span>
               </div>
-              <p className="text-xs line-clamp-1 max-w-xl mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-xs truncate max-w-xl mt-0.5" style={{ color: 'var(--text-muted)' }}>
                 Synthesizing findings for: <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>"{query || 'Clinical query'}"</span>
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {synthesis && (
               <>
                 <button
                   type="button"
                   onClick={handleCopyConclusion}
-                  className="theme-glass-input hover:brightness-110 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl transition cursor-pointer"
+                  className="theme-glass-input hover:brightness-110 hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl transition cursor-pointer"
                   style={{ color: 'var(--text-primary)' }}
                   title="Copy formatted summary to clipboard"
                 >
@@ -341,7 +368,7 @@ ${synthesis.plainLanguageSummary}
                 <button
                   type="button"
                   onClick={handleDownloadMarkdown}
-                  className="theme-glass-input hover:brightness-110 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl transition cursor-pointer"
+                  className="theme-glass-input hover:brightness-110 hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl transition cursor-pointer"
                   style={{ color: 'var(--text-primary)' }}
                   title="Export complete report as Markdown"
                 >
@@ -356,7 +383,7 @@ ${synthesis.plainLanguageSummary}
                   title="Re-run synthesis"
                 >
                   <RotateCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                  <span>Re-Synthesize</span>
+                  <span className="hidden sm:inline">Re-Synthesize</span>
                 </button>
               </>
             )}
@@ -364,10 +391,12 @@ ${synthesis.plainLanguageSummary}
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl theme-glass-input hover:brightness-110 transition cursor-pointer"
+              className="px-2.5 py-1.5 rounded-xl theme-glass-input hover:brightness-110 transition cursor-pointer flex items-center gap-1.5"
               style={{ color: 'var(--text-muted)' }}
-              title="Close modal"
+              title="Close modal (Esc)"
+              aria-label="Close modal"
             >
+              <span className="hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded border border-[var(--border-subtle)] text-[var(--text-muted)] bg-[var(--bg-canvas)]">ESC</span>
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -807,21 +836,24 @@ ${synthesis.plainLanguageSummary}
         </div>
 
         {/* Modal Bottom Action Bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-[var(--border-subtle)] bg-[var(--glass-card-bg)]">
+        <div className="flex items-center justify-between px-6 py-3.5 border-t border-[var(--border-subtle)] bg-[var(--glass-card-bg)] shrink-0">
           <div className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
             PRISMA 2020 qualitative evidence synthesis &bull; Clinical Reasoning
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 text-xs font-semibold rounded-xl theme-glass-input hover:brightness-110 transition cursor-pointer"
+            className="px-4 py-2 text-xs font-semibold rounded-xl theme-glass-input hover:brightness-110 transition cursor-pointer flex items-center gap-2"
             style={{ color: 'var(--text-primary)' }}
           >
-            Close
+            <span>Close</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-[var(--border-subtle)] text-[var(--text-muted)] bg-[var(--bg-canvas)]">ESC</span>
           </button>
         </div>
 
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalNode, document.body) : modalNode;
 };

@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Mail,
@@ -62,6 +63,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setSuccessMessage(null);
     }
   }, [isOpen, currentUser]);
+
+  // Handle ESC key to dismiss modal
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -205,24 +223,33 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xl animate-in fade-in duration-200">
+  const modalNode = (
+    <div 
+      className="fixed inset-0 z-[9999] flex items-start justify-center p-4 pt-8 sm:pt-14 overflow-hidden bg-black/80 backdrop-blur-xl animate-in fade-in duration-150"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="User Authentication"
+    >
       <div 
-        className="fixed inset-0" 
-        onClick={onClose}
-      />
-      <div 
-        className="theme-glass-elevated rounded-3xl w-full max-w-md p-6 sm:p-8 relative z-10 shadow-2xl border border-[var(--border-elevated)] animate-in zoom-in-95 duration-200"
-        style={{ color: 'var(--text-primary)' }}
+        className="theme-glass-elevated rounded-3xl w-full max-w-md p-6 sm:p-8 relative z-10 shadow-2xl border border-[var(--border-elevated)] animate-in zoom-in-95 duration-150"
+        style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-canvas)' }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-5 right-5 p-1.5 rounded-full hover:bg-[var(--bg-canvas)] opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-          title="Close dialog"
+          className="absolute top-5 right-5 px-2 py-1 rounded-xl hover:bg-[var(--bg-canvas)] opacity-80 hover:opacity-100 transition-all cursor-pointer flex items-center gap-1.5"
+          title="Close dialog (Esc)"
+          aria-label="Close dialog"
         >
-          <X className="w-5 h-5" />
+          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-[var(--border-subtle)] opacity-70">ESC</span>
+          <X className="w-4 h-4" />
         </button>
 
         {/* Logged in Account Overview vs Authentication Form */}
@@ -495,4 +522,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalNode, document.body) : modalNode;
 };
