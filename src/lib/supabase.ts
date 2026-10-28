@@ -189,7 +189,25 @@ class SupabaseStore {
   getCurrentUser(): Profile | null {
     if (typeof window === 'undefined') return null;
     const raw = localStorage.getItem(this.userKey);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    try {
+      const parsed: Profile = JSON.parse(raw);
+      if (
+        !parsed ||
+        !parsed.email ||
+        parsed.id === '00000000-0000-0000-0000-000000000001' ||
+        parsed.id === 'usr-offline-researcher' ||
+        parsed.email === 'researcher@rayyan-screening.org' ||
+        parsed.email === 'lead.investigator@rayyan-screening.org'
+      ) {
+        localStorage.removeItem(this.userKey);
+        return null;
+      }
+      return parsed;
+    } catch {
+      localStorage.removeItem(this.userKey);
+      return null;
+    }
   }
 
   setCurrentUser(user: Profile | null, remember: boolean = true): void {
