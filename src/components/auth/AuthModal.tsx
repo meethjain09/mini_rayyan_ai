@@ -510,7 +510,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <span style={{ color: 'var(--text-muted)' }}>Want to explore first?</span>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => {
+                  if (!currentUser) {
+                    const guestProfile: Profile = {
+                      id: 'usr-guest-' + Math.random().toString(36).substring(2, 9),
+                      email: 'guest@minirayyan.local',
+                      created_at: new Date().toISOString(),
+                    };
+                    localStore.setCurrentUser(guestProfile, true);
+                    onAuthSuccess(guestProfile);
+                  }
+                  onClose();
+                }}
                 className="hover:underline font-medium cursor-pointer"
                 style={{ color: 'var(--accent-primary)' }}
               >

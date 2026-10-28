@@ -148,6 +148,7 @@ class SupabaseStore {
           const parsed = JSON.parse(storedUser);
           if (
             parsed.id === '00000000-0000-0000-0000-000000000001' ||
+            parsed.id === 'usr-offline-researcher' ||
             parsed.email === 'researcher@rayyan-screening.org' ||
             parsed.email === 'lead.investigator@rayyan-screening.org'
           ) {

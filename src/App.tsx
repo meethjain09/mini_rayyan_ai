@@ -72,28 +72,26 @@ export default function App() {
           }
         }
 
-        // Check persistent local store for remembered user
-        let localUser = localStore.getCurrentUser();
-        if (!localUser) {
-          // Provide instant offline researcher profile for preview & hackathon evaluation
-          localUser = {
-            id: 'usr-offline-researcher',
-            email: 'researcher@rayyan-screening.org',
-            created_at: new Date().toISOString(),
-          };
-          localStore.setCurrentUser(localUser, false);
+        // Check persistent local store for remembered user on this device
+        const localUser = localStore.getCurrentUser();
+        if (localUser && localUser.email) {
+          // Existing user who already logged in on this device -> Direct Login!
+          setUser(localUser);
+          let loadedBooks = localStore.getBooks(localUser.id);
+          if (loadedBooks.length === 0) {
+            const demoBook = localStore.seedDemoDataset(localUser.id);
+            loadedBooks = [demoBook];
+          }
+          setBooks(loadedBooks);
+          setActiveBookId(localStore.getActiveBookId() || loadedBooks[0]?.id || null);
+          setIsAuthModalOpen(false);
+        } else {
+          // New user on this device -> Prompt to Login / Create Account immediately
+          setUser(null);
+          setBooks([]);
+          setActiveBookId(null);
+          setIsAuthModalOpen(true);
         }
-
-        setUser(localUser);
-        let loadedBooks = localStore.getBooks(localUser.id);
-        if (loadedBooks.length === 0) {
-          // Auto-seed sample demo workspace so user immediately has live data to interact with
-          const demoBook = localStore.seedDemoDataset(localUser.id);
-          loadedBooks = [demoBook];
-        }
-        setBooks(loadedBooks);
-        setActiveBookId(localStore.getActiveBookId() || loadedBooks[0]?.id || null);
-        setIsAuthModalOpen(false);
       } catch (err) {
         console.error('Initialization error:', err);
       } finally {
